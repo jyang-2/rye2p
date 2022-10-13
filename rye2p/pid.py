@@ -10,17 +10,25 @@ import xarray as xr
 from rye2p import trial_tensors
 
 # load .env variables
-dotenv.load_dotenv(Path.home().joinpath('dotenv_files/natural_mixtures/.env'))
-# config = dotenv.dotenv_values('dotenv_files/natural_mixtures/.env')
+# dotenv.load_dotenv(Path.home().joinpath('dotenv_files/natural_mixtures/.env'))
+#
+# DB_PRJ_DIR = Path(os.getenv("DB_PRJ_DIR"))
+# DB_RAW_DIR = Path(os.getenv("DB_RAW_DIR"))
+#
+# NAS_PRJ_DIR = Path(os.getenv("NAS_PRJ_DIR"))
+# NAS_PROC_DIR = Path(os.getenv("NAS_PROC_DIR"))
+# NAS_OLFCONFIG_DIR = Path(os.getenv("NAS_OLFCONFIG_DIR"))
 
-DB_PRJ_DIR = Path(os.getenv("DB_PRJ_DIR"))
-DB_RAW_DIR = Path(os.getenv("DB_RAW_DIR"))
+prj = 'odor_space_collab'
 
-NAS_PRJ_DIR = Path(os.getenv("NAS_PRJ_DIR"))
-NAS_PROC_DIR = Path(os.getenv("NAS_PROC_DIR"))
-NAS_OLFCONFIG_DIR = Path(os.getenv("NAS_OLFCONFIG_DIR"))
+if prj == 'odor_space_collab':
+    DB_RAW_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech "
+                      "Dropbox/Remy/odor_space_collab/raw_data")
+    NAS_PRJ_DIR = Path("/local/matrix/Remy-Data/projects/odor_space_collab")
+    NAS_PROC_DIR = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data")
 
 
+# %%
 def flacq2dir(flat_lacq):
     folder = NAS_PROC_DIR.joinpath(flat_lacq['date_imaged'],
                                    str(flat_lacq['fly_num']),
@@ -141,7 +149,7 @@ def extract_pid_trials(flacq):
     with open(movie_dir.joinpath('stim_list.json'), 'r') as f:
         stim_list = json.load(f)
 
-    trial_ts = np.arange(-5, 15, 0.01)
+    trial_ts = np.arange(-10, 20.0001, 0.001)
     pid_trial_tensor = trial_tensors.make_trial_tensor(pid, sync_times,
                                                        timestamps['olf_ict'],
                                                        trial_ts=trial_ts)
@@ -158,18 +166,39 @@ def extract_pid_trials(flacq):
 
 
 def main(flacq):
-    MOV_DIR = flacq2dir(flacq)
-    da_pid = extract_pid_trials(flacq)
-    da_pid.to_netcdf(MOV_DIR.joinpath('xrda_pid.nc'))
+    print(f'\nProcessing PID traces')
 
+    MOV_DIR = flacq2dir(flacq)
+    print(f'\t- MOV_DIR: {MOV_DIR}')
+
+    pid_file = pid_lines_to_npz(flacq)
+    print(f'\t- PID data saved to {pid_file})')
+
+    return pid_file
+
+    # da_pid = extract_pid_trials(flacq)
+    # print(f'\t- PID traces extracted successfully.')
+
+
+# %%
 
 if __name__ == "__main__":
     # load flat linked acquisition list
     with open(NAS_PRJ_DIR.joinpath('manifestos', 'flat_linked_thor_acquisitions.json'), 'r') as f:
         flat_lacq_list = json.load(f)
 
-    for flat_acq in filter(lambda x: 'movie_type' in x.keys(), flat_lacq_list):
-        print(pid_lines_to_npz(flat_acq))
+    filter_by_type = False
+
+    if filter_by_type:
+        for flat_acq in filter(lambda x: 'kiwi_components_again' in x['thorimage'], flat_lacq_list):
+            print(flat_acq)
+            print(pid_lines_to_npz(flat_acq))
+
+    else:
+        # for flat_acq in filter(lambda x: 'movie_type' in x.keys(), flat_lacq_list):
+        #     print(pid_lines_to_npz(flat_acq))
+        for flat_acq in flat_lacq_list:
+            print(pid_lines_to_npz(flat_acq))
 
 # %%
 # from matplotlib.backends.backend_pdf import PdfPages

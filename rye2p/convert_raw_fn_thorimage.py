@@ -4,6 +4,7 @@ import utils2p
 import shutil
 import numpy as np
 from tqdm import tqdm
+import argparse
 
 # Types of ThorImage files:
 # Raw image files
@@ -42,16 +43,22 @@ from tqdm import tqdm
     - split .tif stacks (<4 GB, for suite2p and caiman)
     - 
 """
-prj = 'narrow_odors'
+prj = 'odor_space_collab'
 
 if prj == 'natural_mixtures':
     RAW_DATA_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech Dropbox/Remy"
                         "/natural_mixtures/raw_data")
-    PROC_DATA_DIR = Path("/local/storage/Remy/natural_mixtures/processed_data")
+    PROC_DATA_DIR = Path("/local/matrix/Remy-Data/projects/natural_mixtures/processed_data")
 elif prj == 'narrow_odors':
     RAW_DATA_DIR = Path("/local/storage/Remy/narrow_odors/raw_data")
     PROC_DATA_DIR = Path("/local/storage/Remy/narrow_odors/processed_data")
+elif prj == 'odor_space_collab':
+    RAW_DATA_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech "
+                        "Dropbox/Remy/odor_space_collab/raw_data")
+    PROC_DATA_DIR = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data")
 
+
+# %%
 
 def copy_raw_dir_2_proc_dir(src_file):
     if isinstance(src_file, str):
@@ -153,10 +160,12 @@ def main(imaging_folder):
 
     for file in tqdm(saved_tiff_files):
         print(f"\nFull .tif file: {file}")
-        saved_tiffs = split_tiff_files(file, frames_per_batch=500)
+        saved_tiffs = split_tiff_files(file, frames_per_batch=1000)
         saved_split_tiffs.append(saved_tiffs)
         pprint.pprint(saved_tiffs, indent=4)
 
     return saved_tiff_files, saved_split_tiffs
 
 
+if __name__ == '__main__':
+    None
