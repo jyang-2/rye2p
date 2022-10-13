@@ -18,34 +18,40 @@ import math
 from scipy.ndimage import gaussian_filter1d
 from scipy.stats import zscore
 
-# load .env variables
-prj = 'odor_space_collab'
-
-if prj == 'natural_mixtures':
-    dotenv.load_dotenv(Path.home().joinpath('dotenv_files/natural_mixtures/.env'))
-    # config = dotenv.dotenv_values('dotenv_files/natural_mixtures/.env')
-
-    DB_PRJ_DIR = Path(os.getenv("DB_PRJ_DIR"))
-    DB_RAW_DIR = Path(os.getenv("DB_RAW_DIR"))
-
-    NAS_PRJ_DIR = Path(os.getenv("NAS_PRJ_DIR"))
-    NAS_PROC_DIR = Path(os.getenv("NAS_PROC_DIR"))
-    NAS_OLFCONFIG_DIR = Path(os.getenv("NAS_OLFCONFIG_DIR"))
-
-    # NAS_PRJ_DIR = Path("/local/matrix/Remy-Data/natural_mixtures/natural_mixtures")
-    # NAS_PROC_DIR = Path("/local/matrix/Remy-Data/natural_mixtures/natural_mixtures/processed_data")
-    # NAS_OLFCONFIG_DIR = Path("/local/matrix/Remy-Data/natural_mixtures/natural_mixtures/olfactometer_configs")
-
-elif prj == 'narrow_odors':
-    NAS_PRJ_DIR = Path("/local/storage/Remy/narrow_odors")
-    NAS_PROC_DIR = Path("/local/storage/Remy/narrow_odors/processed_data")
-    DB_RAW_DIR = Path("/local/storage/Remy/narrow_odors/raw_data")
-
-elif prj == 'odor_space_collab':
-    DB_RAW_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech "
-                      "Dropbox/Remy/odor_space_collab/raw_data")
-    NAS_PRJ_DIR = Path("/local/matrix/Remy-Data/projects/odor_space_collab")
-    NAS_PROC_DIR = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data")
+# # load .env variables
+# prj = 'odor_unpredictability'
+#
+# if prj == 'natural_mixtures':
+#     dotenv.load_dotenv(Path.home().joinpath('dotenv_files/natural_mixtures/.env'))
+#     # config = dotenv.dotenv_values('dotenv_files/natural_mixtures/.env')
+#
+#     DB_PRJ_DIR = Path(os.getenv("DB_PRJ_DIR"))
+#     DB_RAW_DIR = Path(os.getenv("DB_RAW_DIR"))
+#
+#     NAS_PRJ_DIR = Path(os.getenv("NAS_PRJ_DIR"))
+#     NAS_PROC_DIR = Path(os.getenv("NAS_PROC_DIR"))
+#     NAS_OLFCONFIG_DIR = Path(os.getenv("NAS_OLFCONFIG_DIR"))
+#
+#     # NAS_PRJ_DIR = Path("/local/matrix/Remy-Data/natural_mixtures/natural_mixtures")
+#     # NAS_PROC_DIR = Path("/local/matrix/Remy-Data/natural_mixtures/natural_mixtures/processed_data")
+#     # NAS_OLFCONFIG_DIR = Path("/local/matrix/Remy-Data/natural_mixtures/natural_mixtures/olfactometer_configs")
+#
+# elif prj == 'narrow_odors':
+#     NAS_PRJ_DIR = Path("/local/storage/Remy/narrow_odors")
+#     NAS_PROC_DIR = Path("/local/storage/Remy/narrow_odors/processed_data")
+#     DB_RAW_DIR = Path("/local/storage/Remy/narrow_odors/raw_data")
+#
+# elif prj == 'odor_space_collab':
+#     DB_RAW_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech "
+#                       "Dropbox/Remy/odor_space_collab/raw_data")
+#     NAS_PRJ_DIR = Path("/local/matrix/Remy-Data/projects/odor_space_collab")
+#     NAS_PROC_DIR = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data")
+#
+# elif prj == 'odor_unpredictability':
+#     DB_RAW_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech Dropbox/"
+#                       "Remy/odor_unpredictability/raw_data")
+#     NAS_PRJ_DIR = Path("/local/matrix/Remy-Data/projects/odor_unpredictability")
+#     NAS_PROC_DIR = Path("/local/matrix/Remy-Data/projects/odor_unpredictability/processed_data")
 
 
 # %%
@@ -91,13 +97,13 @@ def snake_case(s):
     return sc
 
 
-def flacq2rawfiles(flat_lacq):
-    meta_file = DB_RAW_DIR.joinpath(flat_lacq['date_imaged'],
+def flacq2rawfiles(flat_lacq, raw_dir):
+    meta_file = raw_dir.joinpath(flat_lacq['date_imaged'],
                                     str(flat_lacq['fly_num']),
                                     flat_lacq['thorimage'],
                                     'Experiment.xml')
 
-    h5_file = DB_RAW_DIR.joinpath(flat_lacq['date_imaged'],
+    h5_file = raw_dir.joinpath(flat_lacq['date_imaged'],
                                   str(flat_lacq['fly_num']),
                                   flat_lacq['thorsync'],
                                   'Episode001.h5')
@@ -106,8 +112,8 @@ def flacq2rawfiles(flat_lacq):
     return h5_file, sync_meta_file, meta_file
 
 
-def flacq2dir(flat_lacq):
-    folder = NAS_PROC_DIR.joinpath(flat_lacq['date_imaged'],
+def flacq2dir(flat_lacq, proc_dir):
+    folder = proc_dir.joinpath(flat_lacq['date_imaged'],
                                    str(flat_lacq['fly_num']),
                                    flat_lacq['thorimage'])
     return folder
@@ -221,18 +227,20 @@ def extract_timestamp_data(h5_file, meta_file):
     return timestamp_data
 
 
-def convert_thorsync_to_timestamps_npy(flacq):
+def convert_thorsync_to_timestamps_npy(flacq, raw_dir, proc_dir):
     """ Extracts timing info for frame acquisitions, stimuli, and scope acquisitions.
 
     Args:
+        proc_dir ():
+        raw_dir ():
         flacq (dict): dict from dataset manifesto `flat_linked_thor_acquisitions.json`
 
     Returns:
         timestamps (dict): contains fields 'stack_times', 'frame_times', 'scope_ici', 'scope_ict', 'olf_ici', 'olf_ict'
         """
 
-    h5_file, sync_meta_file, meta_file = flacq2rawfiles(flacq)
-    SAVE_DIR = flacq2dir(flacq)
+    h5_file, sync_meta_file, meta_file = flacq2rawfiles(flacq, raw_dir)
+    SAVE_DIR = flacq2dir(flacq, proc_dir)
 
     print(f'\nConverting ThorSync to timestamps:')
     print(f"\t- SAVE_DIR: {SAVE_DIR}")
@@ -258,10 +266,10 @@ def convert_thorsync_to_timestamps_npy(flacq):
     return save_file, timestamps
 
 
-def create_proc_dir(flacq):
+def create_proc_dir(flacq, proc_dir):
     """Creates movie folder in processed data directory `PROC_DATA_DIR` for FlatFlyAcquisitions."""
 
-    mov_dir = flacq2dir(flacq)
+    mov_dir = flacq2dir(flacq, proc_dir)
     print(f"\n{mov_dir}")
     print(f"\tmovie folder exists: {mov_dir.is_dir()}")
 
@@ -272,19 +280,21 @@ def create_proc_dir(flacq):
     return mov_dir
 
 
-def copy_experiment_xml(flacq):
+def copy_experiment_xml(flacq, raw_dir, proc_dir):
     """Copies 'Experiment.xml' file from the raw data  to processed_data.
 
     Source and destination filepaths are determined from information contained in flacq.
 
     Args:
+        proc_dir ():
+        raw_dir ():
         flacq (dict): FlatFlyAcquisition
 
     Returns:
         dest_file (Path): filepath where Experiment.xml was copied
     """
-    h5_file, sync_meta_file, meta_file = flacq2rawfiles(flacq)
-    dest_file = flacq2dir(flacq).joinpath('Experiment.xml')
+    h5_file, sync_meta_file, meta_file = flacq2rawfiles(flacq, raw_dir)
+    dest_file = flacq2dir(flacq, proc_dir).joinpath('Experiment.xml')
 
     if not dest_file.exists():
         shutil.copy(meta_file, dest_file)
@@ -296,16 +306,16 @@ def copy_experiment_xml(flacq):
     return meta_file, dest_file
 
 
-def main(flacq):
+def main(flacq, raw_dir, proc_dir):
     print(f'\nProcessing ThorSync files:')
     print(f'---------------------------')
     pp.pprint(flacq)
 
-    mov_dir = create_proc_dir(flacq)
+    mov_dir = create_proc_dir(flacq, proc_dir)
 
-    copy_experiment_xml(flacq)
+    copy_experiment_xml(flacq, raw_dir, proc_dir)
 
-    timestamps_file, timestamps = convert_thorsync_to_timestamps_npy(flacq)
+    timestamps_file, timestamps = convert_thorsync_to_timestamps_npy(flacq, raw_dir, proc_dir)
     print('Done processing ThorSync files.')
     return timestamps_file, timestamps
 
@@ -520,10 +530,12 @@ def main(flacq):
 #
 #
 # #%%
-# folder = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech Dropbox/Remy/natural_mixtures/raw_data/2022-02-11/1/SyncData001")
+# folder = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech
+# Dropbox/Remy/natural_mixtures/raw_data/2022-02-11/1/SyncData001")
 # h5_file = folder.joinpath("Episode001.h5")
 # sync_meta_file = h5_file.with_name("ThorRealTimeDataSettings.xml")
-# raw_file = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech Dropbox/Remy/natural_mixtures/raw_data/2022-02-11/3/kiwi/Image_001_001.raw")
+# raw_file = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech
+# Dropbox/Remy/natural_mixtures/raw_data/2022-02-11/3/kiwi/Image_001_001.raw")
 # meta_file = raw_file.with_name("Experiment.xml")
 #
 # meta = utils2p.Metadata(meta_file)
@@ -635,7 +647,8 @@ def main(flacq):
 # steps_per_frame
 # 30
 #
-# processed_frame_counter = utils2p.synchronization.process_frame_counter(frame_counter, steps_per_frame=steps_per_frame)
+# processed_frame_counter = utils2p.synchronization.process_frame_counter(frame_counter,
+# steps_per_frame=steps_per_frame)
 #
 # set(processed_frame_counter)
 # {0, -9223372036854775808}

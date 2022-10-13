@@ -11,23 +11,27 @@ NAS_PRJ_DIR = None
 
 
 def get_project_paths(prj=None):
+    """Get directory paths for each project."""
+
     if prj is None:
         prj = _default_prj
-
     if prj == 'natural_mixtures':
-        _RAW_DATA_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech Dropbox/Remy"
-                             "/natural_mixtures/raw_data")
-        _PROC_DATA_DIR = Path("/local/matrix/Remy-Data/projects/natural_mixtures/processed_data")
+        _RAW_DATA_DIR = _DROPBOX.joinpath('natural_mixtures', 'raw_data')
+        _NAS_PRJ_DIR = _MATRIX.joinpath('Remy-Data', 'projects', 'natural_mixtures')
+        _NAS_PROC_DIR = _NAS_PRJ_DIR.joinpath('processed_data')
     elif prj == 'narrow_odors':
+        _NAS_PRJ_DIR = Path("/local/storage/Remy/narrow_odors")
         _RAW_DATA_DIR = Path("/local/storage/Remy/narrow_odors/raw_data")
-        _PROC_DATA_DIR = Path("/local/storage/Remy/narrow_odors/processed_data")
+        _NAS_PROC_DIR = _NAS_PRJ_DIR.joinpath('processed_data')
     elif prj == 'odor_space_collab':
         _RAW_DATA_DIR = _DROPBOX.joinpath('odor_space_collab', 'raw_data')
-        _PROC_DATA_DIR = _MATRIX.joinpath("Remy-Data/projects/odor_space_collab/processed_data")
-
-    _NAS_PRJ_DIR = _PROC_DATA_DIR.parent
-
-    return _RAW_DATA_DIR, _PROC_DATA_DIR, _NAS_PRJ_DIR
+        _NAS_PRJ_DIR = _MATRIX.joinpath('Remy-Data', 'projects', 'odor_space_collab')
+        _NAS_PROC_DIR = _NAS_PRJ_DIR.joinpath('processed_data')
+    elif prj == 'odor_unpredictability':
+        _RAW_DATA_DIR = _DROPBOX.joinpath('odor_unpredictability', 'raw_data')
+        _NAS_PRJ_DIR = _MATRIX.joinpath('Remy-Data', 'projects', 'odor_unpredictability')
+        _NAS_PROC_DIR = _NAS_PRJ_DIR.joinpath('processed_data')
+    return _RAW_DATA_DIR, _NAS_PROC_DIR, _NAS_PRJ_DIR
 
 
 def set_prj(prj):

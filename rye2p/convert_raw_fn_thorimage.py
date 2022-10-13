@@ -6,6 +6,7 @@ import numpy as np
 from tqdm import tqdm
 import argparse
 
+
 # Types of ThorImage files:
 # Raw image files
 # ---------------
@@ -33,46 +34,59 @@ import argparse
 #   - No raw image file in directory
 #   - Has no associated ThorSync file
 #   - Convert to 3D tiff stack
-
-# %% SECTION 00:  CONVERT RAW IMAGE FILES TO TIFF STACKS
-"""
-- Find all raw image files in day's data folder
-- Compute ThorImage/ThorSync file associations based on creation times
-- Convert .raw file into .tif stack
-- Other formats include:    
-    - split .tif stacks (<4 GB, for suite2p and caiman)
-    - 
-"""
-prj = 'odor_space_collab'
-
-if prj == 'natural_mixtures':
-    RAW_DATA_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech Dropbox/Remy"
-                        "/natural_mixtures/raw_data")
-    PROC_DATA_DIR = Path("/local/matrix/Remy-Data/projects/natural_mixtures/processed_data")
-elif prj == 'narrow_odors':
-    RAW_DATA_DIR = Path("/local/storage/Remy/narrow_odors/raw_data")
-    PROC_DATA_DIR = Path("/local/storage/Remy/narrow_odors/processed_data")
-elif prj == 'odor_space_collab':
-    RAW_DATA_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech "
-                        "Dropbox/Remy/odor_space_collab/raw_data")
-    PROC_DATA_DIR = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data")
+#
+# # %% SECTION 00:  CONVERT RAW IMAGE FILES TO TIFF STACKS
+# """
+# - Find all raw image files in day's data folder
+# - Compute ThorImage/ThorSync file associations based on creation times
+# - Convert .raw file into .tif stack
+# - Other formats include:
+#     - split .tif stacks (<4 GB, for suite2p and caiman)
+#     -
+# """
+# prj = 'odor_space_'
+#
+# if prj == 'natural_mixtures':
+#     RAW_DATA_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech Dropbox/Remy"
+#                         "/natural_mixtures/raw_data")
+#     PROC_DATA_DIR = Path("/local/matrix/Remy-Data/projects/natural_mixtures/processed_data")
+# elif prj == 'narrow_odors':
+#     RAW_DATA_DIR = Path("/local/storage/Remy/narrow_odors/raw_data")
+#     PROC_DATA_DIR = Path("/local/storage/Remy/narrow_odors/processed_data")
+# elif prj == 'odor_space_collab':
+#     RAW_DATA_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech "
+#                         "Dropbox/Remy/odor_space_collab/raw_data")
+#     PROC_DATA_DIR = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data")
+# elif prj == 'odor_unpredictability':
+#     RAW_DATA_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech Dropbox/"
+#                         "Remy/odor_unpredictability/raw_data")
+#     PROC_DATA_DIR = Path("/local/matrix/Remy-Data/projects/odor_unpredictability/processed_data")
+#
+# # %%
+# prj = 'odor_space_collab'
+# datadirs.set_prj(prj)
+#
+# RAW_DATA_DIR = datadirs.RAW_DATA_DIR
+# PROC_DATA_DIR = datadirs.NAS_PROC_DIR
 
 
 # %%
 
-def copy_raw_dir_2_proc_dir(src_file):
+def copy_raw_dir_2_proc_dir(src_file, raw_dir, proc_dir):
     if isinstance(src_file, str):
         src_file = Path(src_file)
 
-    dest_file = PROC_DATA_DIR.joinpath(*src_file.relative_to(RAW_DATA_DIR).parts)
+    dest_file = proc_dir.joinpath(*src_file.relative_to(raw_dir).parts)
     shutil.copy(src_file, dest_file)
     return dest_file
 
 
-def convert_raw_to_tiff(raw_file):
+def convert_raw_to_tiff(raw_file, raw_dir, proc_dir):
     """ Convert raw file to single tif stack
 
     Args:
+        proc_dir ():
+        raw_dir ():
         raw_file ():
 
     Returns:
@@ -86,11 +100,11 @@ def convert_raw_to_tiff(raw_file):
     stack1, = utils2p.load_raw(raw_file, meta)
 
     # convert to relative path
-    rel_path = raw_file.relative_to(RAW_DATA_DIR)
+    rel_path = raw_file.relative_to(raw_dir)
     print(f"\nRaw image file: {rel_path}")
 
     # build tiff file name - save full movie as Image_001_001.tif
-    save_name = PROC_DATA_DIR.joinpath(rel_path.with_suffix(".tif"))
+    save_name = proc_dir.joinpath(rel_path.with_suffix(".tif"))
 
     save_name.parent.mkdir(parents=True, exist_ok=True)
     print(f"Saving to: {save_name}")
@@ -139,7 +153,7 @@ def split_tiff_files(tiff_file, frames_per_batch, save_dir=Path('stk')):
     return saved_files
 
 
-def main(imaging_folder):
+def main(imaging_folder, raw_dir, proc_dir):
     if isinstance(imaging_folder, str):
         imaging_folder = Path(imaging_folder)
 
@@ -151,7 +165,7 @@ def main(imaging_folder):
     saved_tiff_files = []
 
     for file in tqdm(all_raw_files):
-        saved_tiff_files.append(convert_raw_to_tiff(file))
+        saved_tiff_files.append(convert_raw_to_tiff(file, raw_dir, proc_dir))
 
     # -------------------------------------------------------------
     # split recently converted tiff stacks into smaller tiff stacks
