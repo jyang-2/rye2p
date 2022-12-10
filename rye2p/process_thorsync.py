@@ -1,5 +1,6 @@
 import itertools
-import os, sys
+import os
+import sys
 from pathlib import Path
 import dateparser
 import shutil
@@ -17,6 +18,11 @@ import pprint as pp
 import math
 from scipy.ndimage import gaussian_filter1d
 from scipy.stats import zscore
+
+import h5py
+from fuzzywuzzy import fuzz
+from rye2p import fix_frame_times
+
 
 # # load .env variables
 # prj = 'odor_unpredictability'
@@ -52,6 +58,18 @@ from scipy.stats import zscore
 #                       "Remy/odor_unpredictability/raw_data")
 #     NAS_PRJ_DIR = Path("/local/matrix/Remy-Data/projects/odor_unpredictability")
 #     NAS_PROC_DIR = Path("/local/matrix/Remy-Data/projects/odor_unpredictability/processed_data")
+
+# %%
+def get_thorsync_line_names(h5_file):
+    thorsync_groups = ['AI', 'CI', 'DI', 'Global']
+
+    line_names = []
+    with h5py.File(h5_file, 'r') as f:
+        for grp in f.keys():
+            for item in f[grp]:
+                line_names.append(item)
+    line_names.remove('GCtr')
+    return line_names
 
 
 # %%
@@ -99,14 +117,14 @@ def snake_case(s):
 
 def flacq2rawfiles(flat_lacq, raw_dir):
     meta_file = raw_dir.joinpath(flat_lacq['date_imaged'],
-                                    str(flat_lacq['fly_num']),
-                                    flat_lacq['thorimage'],
-                                    'Experiment.xml')
+                                 str(flat_lacq['fly_num']),
+                                 flat_lacq['thorimage'],
+                                 'Experiment.xml')
 
     h5_file = raw_dir.joinpath(flat_lacq['date_imaged'],
-                                  str(flat_lacq['fly_num']),
-                                  flat_lacq['thorsync'],
-                                  'Episode001.h5')
+                               str(flat_lacq['fly_num']),
+                               flat_lacq['thorsync'],
+                               'Episode001.h5')
 
     sync_meta_file = h5_file.with_name('ThorRealTimeDataSettings.xml')
     return h5_file, sync_meta_file, meta_file
@@ -114,8 +132,8 @@ def flacq2rawfiles(flat_lacq, raw_dir):
 
 def flacq2dir(flat_lacq, proc_dir):
     folder = proc_dir.joinpath(flat_lacq['date_imaged'],
-                                   str(flat_lacq['fly_num']),
-                                   flat_lacq['thorimage'])
+                               str(flat_lacq['fly_num']),
+                               flat_lacq['thorimage'])
     return folder
 
 
@@ -128,21 +146,53 @@ def get_pulse_idx(h5_file, line_name, voltage_threshold=2.5):
     return ici, fci
 
 
+def get_matched_thorsync_lines(h5_file, var_names=None):
+    """ThorSync line names vary slightly across recordings (PiezoMonitor, piezoMonitor, piezo_monitor, etc)."""
+
+    if var_names is None:
+        var_names = (
+                'piezo_monitor',
+                'pockels_monitor',
+                'lightpath_shutter',
+                'olf_disp_pin',
+                'pid',
+                'scope_pin',
+                'frame_counter',
+                'frame_in',
+                'frame_out')
+
+    cleaned_var_names = [clean_line_name(item) for item in var_names]
+
+    line_names_from_file = get_thorsync_line_names(h5_file)
+    cleaned_line_names = [clean_line_name(item) for item in line_names_from_file]
+
+    match_ratio = np.array([[fuzz.ratio(x, y) for x in cleaned_var_names] for y in cleaned_line_names])
+    matched_thorsync_lines = np.array(line_names_from_file)[np.argmax(match_ratio, axis=1)].tolist()
+
+    return matched_thorsync_lines
+
+
+def clean_line_name(line_name):
+    return line_name.lower().replace(' ', '').replace('_', '')
+
+
 def get_thorsync_lines(h5_file):
     sync_meta_file = h5_file.with_name('ThorRealTimeDataSettings.xml')
     sync_meta = utils2p.synchronization.SyncMetadata(sync_meta_file)
 
-    # LOAD THORSYNC H5 FILE AND COMPUTE FRAME TIMES
-    # thorsync line names
-    line_names = ['PiezoMonitor',
-                  'Pockels1Monitor',
-                  'lightpathshutter',
-                  'olfDispPin',
-                  'pid',
-                  'scopePin',
-                  'FrameCounter',
-                  'FrameIn',
-                  'FrameOut', ]
+    var_names = (
+            'piezo_monitor',
+            'pockels_monitor',
+            'lightpath_shutter',
+            'olf_disp_pin',
+            'pid',
+            'scope_pin',
+            'frame_counter',
+            'frame_in',
+            'frame_out')
+
+    # match `line_names_from_file` to desired `var_names`
+    matched_line_names = get_matched_thorsync_lines(h5_file, var_names=var_names)
 
     (piezo_monitor,
      pockels_monitor,
@@ -152,7 +202,7 @@ def get_thorsync_lines(h5_file):
      scope_pin,
      frame_counter,
      frame_in,
-     frame_out) = utils2p.synchronization.get_lines_from_sync_file(h5_file, line_names)
+     frame_out) = utils2p.synchronization.get_lines_from_sync_file(h5_file, matched_line_names)
 
     sync_times = utils2p.synchronization.get_times(len(frame_counter), sync_meta.get_freq())
     frame_out = (frame_out > 0) * 1
@@ -177,6 +227,9 @@ def get_thorsync_lines(h5_file):
 def extract_timestamp_data(h5_file, meta_file):
     sync_data = get_thorsync_lines(h5_file)
     meta = utils2p.Metadata(meta_file)
+
+    # check if single plane
+    fast_z = bool(int(meta.get_metadata_value("Streaming", 'zFastEnable')))
 
     # timepoints for every individual frame
     # --------------------------------------
@@ -227,6 +280,11 @@ def extract_timestamp_data(h5_file, meta_file):
     return timestamp_data
 
 
+def fast_z_enabled(meta_file):
+    meta = utils2p.Metadata(meta_file)
+    return bool(int(meta.get_metadata_value("Streaming", 'zFastEnable')))
+
+
 def convert_thorsync_to_timestamps_npy(flacq, raw_dir, proc_dir):
     """ Extracts timing info for frame acquisitions, stimuli, and scope acquisitions.
 
@@ -239,6 +297,7 @@ def convert_thorsync_to_timestamps_npy(flacq, raw_dir, proc_dir):
         timestamps (dict): contains fields 'stack_times', 'frame_times', 'scope_ici', 'scope_ict', 'olf_ici', 'olf_ict'
         """
 
+    # make initial timestamps0.npy
     h5_file, sync_meta_file, meta_file = flacq2rawfiles(flacq, raw_dir)
     SAVE_DIR = flacq2dir(flacq, proc_dir)
 
@@ -246,17 +305,33 @@ def convert_thorsync_to_timestamps_npy(flacq, raw_dir, proc_dir):
     print(f"\t- SAVE_DIR: {SAVE_DIR}")
 
     meta = utils2p.Metadata(meta_file)
+    fast_z = bool(int(meta.get_metadata_value("Streaming", 'zFastEnable')))
 
-    timestamps = extract_timestamp_data(h5_file, meta_file)
-    np.save(SAVE_DIR.joinpath('timestamps0.npy'), timestamps)
+    timestamps0 = extract_timestamp_data(h5_file, meta_file)
+    np.save(SAVE_DIR.joinpath('timestamps0.npy'), timestamps0)
 
-    steps_per_frame = meta.get_n_flyback_frames() + meta.get_n_z()
+    timestamps = fix_frame_times.fix_timestamps0(SAVE_DIR.joinpath('timestamps0.npy'))
 
-    stack_times_correct = timestamps['stack_times'].size == meta.get_n_time_points()
-    frame_times_correct = timestamps['frame_times'].size == steps_per_frame * meta.get_n_time_points()
+    # correct timestamps file
+    # -----------------------
+    # if volumetric
+    if fast_z:
+        steps_per_frame = meta.get_n_flyback_frames() + meta.get_n_z()
 
-    print(f"\t- correct # of stack_times: {stack_times_correct}")
-    print(f"\t- correct # of frame_times: {frame_times_correct}")
+        stack_times_correct = timestamps['stack_times'].size == meta.get_n_time_points()
+        frame_times_correct = timestamps['frame_times'].size == steps_per_frame * meta.get_n_time_points()
+
+        print(f"\t- correct # of stack_times: {stack_times_correct}")
+        print(f"\t- correct # of frame_times: {frame_times_correct}")
+
+    else:
+        n_frames_averaged = meta.get_n_averaging()
+        print(f'\tsingle plane movie, {n_frames_averaged} frame average')
+
+        timestamps['stack_times'] = timestamps['stack_times'][::n_frames_averaged]
+
+        stack_times_correct = timestamps['stack_times'].size == meta.get_n_time_points()
+        print(f"\t- correct # of stack_times: {stack_times_correct}")
 
     save_file = SAVE_DIR.joinpath('timestamps.npy')
     np.save(save_file, timestamps)
@@ -264,6 +339,19 @@ def convert_thorsync_to_timestamps_npy(flacq, raw_dir, proc_dir):
     print(f"- {save_file}")
 
     return save_file, timestamps
+
+
+def edit_timestamps(timestamps_ori, frames_to_drop, tsub):
+    """
+
+    Args:
+        timestamps_ori (): should have correct # of stack times
+        frames_to_drop (): frames to drop before downsampling (list of indices)
+        tsub ():
+
+    Returns:
+
+    """
 
 
 def create_proc_dir(flacq, proc_dir):
