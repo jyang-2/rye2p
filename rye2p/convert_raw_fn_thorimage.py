@@ -1,3 +1,41 @@
+"""Types of ThorImage files:
+Raw image files
+---------------
+  -
+  - folder will contain "Image_001_001.raw"
+  - Experiment.xml file will contain :
+
+      - ... <CaptureMode mode="1" /> ...
+
+      - <ExperimentNotes text="odors: mixed 2/10&#xD;&#xA;surgeon:
+              Remy&#xD;&#xA;20220211_143711_stimuli\20220211_143711_stimuli_0.yaml" />
+
+  - Has a corresponding ThorSync recording that must also be parsed
+  - Streaming, stimulus-triggered functional recordings
+  - Can be a single or multi-plane recording
+
+Piezo previews
+---------------
+  - Movies captured using "Preview" in the piezo controller dialog box of ThorImage
+  - Place these in /previews and ignore
+
+z-stacks:
+---------
+  - Experiment.xml file will contain : <CaptureMode mode="0" />
+  - No raw image file in directory
+  - Has no associated ThorSync file
+  - Convert to 3D tiff stack
+
+# %% SECTION 00:  CONVERT RAW IMAGE FILES TO TIFF STACKS
+
+- Find all raw image files in day's data folder
+- Compute ThorImage/ThorSync file associations based on creation times
+- Convert .raw file into .tif stack
+- Other formats include:
+    - split .tif stacks (<4 GB, for suite2p and caiman)
+    -
+"""
+
 import pprint
 from pathlib import Path
 import utils2p
@@ -5,69 +43,6 @@ import shutil
 import numpy as np
 from tqdm import tqdm
 import argparse
-
-
-# Types of ThorImage files:
-# Raw image files
-# ---------------
-#   -
-#   - folder will contain "Image_001_001.raw"
-#   - Experiment.xml file will contain :
-
-#       - ... <CaptureMode mode="1" /> ...
-#
-#       - <ExperimentNotes text="odors: mixed 2/10&#xD;&#xA;surgeon:
-#               Remy&#xD;&#xA;20220211_143711_stimuli\20220211_143711_stimuli_0.yaml" />
-#
-#   - Has a corresponding ThorSync recording that must also be parsed
-#   - Streaming, stimulus-triggered functional recordings
-#   - Can be a single or multi-plane recording
-#
-# Piezo previews
-# ---------------
-#   - Movies captured using "Preview" in the piezo controller dialog box of ThorImage
-#   - Place these in /previews and ignore
-#
-# z-stacks:
-# ---------
-#   - Experiment.xml file will contain : <CaptureMode mode="0" />
-#   - No raw image file in directory
-#   - Has no associated ThorSync file
-#   - Convert to 3D tiff stack
-#
-# # %% SECTION 00:  CONVERT RAW IMAGE FILES TO TIFF STACKS
-# """
-# - Find all raw image files in day's data folder
-# - Compute ThorImage/ThorSync file associations based on creation times
-# - Convert .raw file into .tif stack
-# - Other formats include:
-#     - split .tif stacks (<4 GB, for suite2p and caiman)
-#     -
-# """
-# prj = 'odor_space_'
-#
-# if prj == 'natural_mixtures':
-#     RAW_DATA_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech Dropbox/Remy"
-#                         "/natural_mixtures/raw_data")
-#     PROC_DATA_DIR = Path("/local/matrix/Remy-Data/projects/natural_mixtures/processed_data")
-# elif prj == 'narrow_odors':
-#     RAW_DATA_DIR = Path("/local/storage/Remy/narrow_odors/raw_data")
-#     PROC_DATA_DIR = Path("/local/storage/Remy/narrow_odors/processed_data")
-# elif prj == 'odor_space_collab':
-#     RAW_DATA_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech "
-#                         "Dropbox/Remy/odor_space_collab/raw_data")
-#     PROC_DATA_DIR = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data")
-# elif prj == 'odor_unpredictability':
-#     RAW_DATA_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech Dropbox/"
-#                         "Remy/odor_unpredictability/raw_data")
-#     PROC_DATA_DIR = Path("/local/matrix/Remy-Data/projects/odor_unpredictability/processed_data")
-#
-# # %%
-# prj = 'odor_space_collab'
-# datadirs.set_prj(prj)
-#
-# RAW_DATA_DIR = datadirs.RAW_DATA_DIR
-# PROC_DATA_DIR = datadirs.NAS_PROC_DIR
 
 
 # %%
@@ -153,11 +128,15 @@ def split_tiff_files(tiff_file, frames_per_batch, save_dir=Path('stk')):
     return saved_files
 
 
+# %%
 def main(imaging_folder, raw_dir, proc_dir):
     if isinstance(imaging_folder, str):
         imaging_folder = Path(imaging_folder)
 
     all_raw_files = sorted(list(imaging_folder.rglob("Image_001_001.raw")))
+
+    if len(all_raw_files) == 0:
+        all_raw_files = sorted(list(imaging_folder.rglob("Image_0001_0001.raw")))
 
     # -----------------------------------------
     # convert .raw files to 1 large tiff stack
