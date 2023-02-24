@@ -90,6 +90,9 @@ def imread_stk_dir(stk_dir):
 
 def downsample_from_tiff(tiff_file, tsub, frames_to_drop=None, agg='sum'):
     stack0 = utils2p.load_img(tiff_file, memmap=True)
+    axes = 'TZYX'
+    dims = [item for item in str.lower(axes)]
+    t, z, y, x = stack0.shape
 
     if frames_to_drop is not None:
         stack_trimmed = np.delete(stack0, frames_to_drop, axis=0)
@@ -260,11 +263,11 @@ def edit_movie_and_timestamps(file, tsub, frames_to_drop=None, agg='sum'):
 
 # %%
 if __name__ == '__main__':
-    for thorimage_name in ['fn_0001']:
-        tsub = 5
+    for thorimage_name in ['fn_0004', 'fn_0005']:
         folder_tsub = downsample_and_save_acquisition(
-                Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data_old/2019-04-26/3")
+                Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data_old/2019-04-26/4")
                 .joinpath(thorimage_name, 'stk'),
                 frames_to_drop=None,
-                tsub=tsub,
+                tsub=3,
+                agg='sum'
                 )
