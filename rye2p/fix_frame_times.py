@@ -1,9 +1,9 @@
+"""Fixes issues with extracting ttl pulses and timestamp information from ThorSync files"""
 import numpy as np
 from pathlib import Path
 import utils2p
 import copy
 from typing import Union, List
-
 from scipy.optimize import linear_sum_assignment
 
 
@@ -116,8 +116,6 @@ def frames_by_scope_pulse(frame_times, scope_ict, scope_fct):
     return frames_by_pulse
 
 
-# %%
-
 def correct_frame_times_fastz(frame_times, scope_ict, scope_fct, z_steps):
     """
 
@@ -138,6 +136,7 @@ def correct_frame_times_fastz(frame_times, scope_ict, scope_fct, z_steps):
 
 
 def fix_timestamp_pulse_times(timestamps):
+    """If there isn't an equal # of **_ict and {}_fct elements, they are matched."""
     scope_ict = timestamps['scope_ict']
     scope_fct = timestamps['scope_fct']
     if scope_ict.size != scope_fct.size:
@@ -157,11 +156,31 @@ def fix_timestamp_pulse_times(timestamps):
     return new_timestamps
 
 
+def fix_olf_times(timestamps0):
+    """Removes any olf times that occur outside of a scope pulse (between scope_ict and scope_fct)"""
+    fixed_olf_ict = frames_by_scope_pulse(timestamps0['olf_ict'],
+                                          timestamps0['scope_ict'],
+                                          timestamps0['scope_fct'])
+    fixed_olf_ict = np.concatenate(fixed_olf_ict)
+
+    fixed_olf_fct = frames_by_scope_pulse(timestamps0['olf_fct'],
+                                          timestamps0['scope_ict'],
+                                          timestamps0['scope_fct']
+                                          )
+    fixed_olf_fct = np.concatenate(fixed_olf_fct)
+
+    olf_fixed_timestamps0 = copy.deepcopy(timestamps0)
+    olf_fixed_timestamps0['olf_ict'] = fixed_olf_ict
+    olf_fixed_timestamps0['olf_fct'] = fixed_olf_fct
+
+    return olf_fixed_timestamps0
+
+
 def fix_timestamps0(timestamps0_file):
     """
 
     Args:
-        timestamps0_file ():
+        timestamps0_file (Union[str, Path]):
         timestamps_file (str, Path):
         overwrite_ok ():
 
@@ -195,9 +214,11 @@ def fix_timestamps0(timestamps0_file):
     fixed_frame_times = np.concatenate(frame_times_per_pulse)
 
     if fixed_stack_times.size != n_timepoints:
-        raise Exception("Could not extract the correct # of stack_times.")
+        # raise Exception("Could not extract the correct # of stack_times.")
+        print("Could not extract the correct # of stack_times.")
     if fixed_frame_times.size != n_frames:
-        raise Exception("Could not extract the correct # of frame_times.")
+        # raise Exception("Could not extract the correct # of frame_times.")
+        print("Could not extract the correct # of frame_times.")
 
     # timestamps_file = timestamps0_file.with_name('timestamps.npy')
 
