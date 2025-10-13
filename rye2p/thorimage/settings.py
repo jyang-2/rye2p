@@ -1,10 +1,5 @@
-"""Get relevant imaging settings
+"""Get relevant ThorImage settings from Experiment.xml file"""
 
-- single plane vs. fast-z mode
-- Frame averaging
-
-# ThorSync
-"""
 from pathlib import Path
 import utils2p
 from attrs import define, field
@@ -100,6 +95,11 @@ class FunctionalImagingSettings:
     def to_dict(self):
         return cattrs.unstructure(self)
 
+    def to_yaml(self, file):
+        with open(file, 'w') as f:
+            yaml.dump(self.to_dict(), f, sort_keys=False)
+
+
 
 # %%
 if __name__ == '__main__':
@@ -111,6 +111,7 @@ if __name__ == '__main__':
     fly_num = 1
     thorimage_name = 'lexi10_fastz'
 
+    # get filepath to {{ThorImage folder}}/Experiment.xml file
     thorimage_xml = LEXI_RAW_DIR.joinpath(date_imaged,
                                           str(fly_num),
                                           thorimage_name,
