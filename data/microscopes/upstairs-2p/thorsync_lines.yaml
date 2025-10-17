@@ -1,0 +1,9 @@
+piezo_monitor: PiezoMonitor
+pockels_monitor: Pockels1Monitor
+lightpath_shutter: lightpathshutter
+olf_disp_pin: olfDispPin
+pid: pid
+scope_pin: scopePin
+frame_counter: FrameCounter
+frame_in: FrameIn
+frame_out: FrameOut
