@@ -40,9 +40,9 @@ import pprint
 from pathlib import Path
 import utils2p
 import shutil
-import numpy as np
+# import numpy as np
 from tqdm import tqdm
-import argparse
+# import argparse
 
 
 # %%
@@ -153,7 +153,7 @@ def main(imaging_folder, raw_dir, proc_dir):
 
     for file in tqdm(saved_tiff_files):
         print(f"\nFull .tif file: {file}")
-        saved_tiffs = split_tiff_files(file, frames_per_batch=1000)
+        saved_tiffs = split_tiff_files(file, frames_per_batch=500)
         saved_split_tiffs.append(saved_tiffs)
         pprint.pprint(saved_tiffs, indent=4)
 

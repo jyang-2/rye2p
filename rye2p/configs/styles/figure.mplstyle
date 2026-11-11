@@ -1,0 +1,8 @@
+axes.spines.right: False,
+axes.spines.top: False,
+figure.titlesize: 12,
+axes.titlesize: 10,  # Title font size
+axes.labelsize: 10,  # Axis label font size
+xtick.labelsize: 8,  # X-tick label font size
+ytick.labelsize: 8  # Y-tick label font size
+font.sans-serif: ['Arial', 'Verdana', 'DejaVu Sans']

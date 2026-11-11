@@ -1,23 +1,23 @@
-import itertools
-import os
-import sys
-from pathlib import Path
-import dateparser
+# import itertools
+# import os
+# import sys
+# from pathlib import Path
+# import dateparser
 import shutil
 import numpy as np
-import pydantic
-import h5py
+# import pydantic
+# import h5py
 import utils2p
 import utils2p.synchronization
 from re import sub
 
-import yaml
-import json
-import dotenv
+# import yaml
+# import json
+# import dotenv
 import pprint as pp
-import math
-from scipy.ndimage import gaussian_filter1d
-from scipy.stats import zscore
+# import math
+# from scipy.ndimage import gaussian_filter1d
+# from scipy.stats import zscore
 
 import h5py
 from fuzzywuzzy import fuzz
@@ -80,6 +80,11 @@ def flacq2rawfiles(flat_lacq, raw_dir):
                                str(flat_lacq['fly_num']),
                                flat_lacq['thorsync'],
                                'Episode001.h5')
+    if not h5_file.is_file():
+        h5_file = raw_dir.joinpath(flat_lacq['date_imaged'],
+                                   str(flat_lacq['fly_num']),
+                                   flat_lacq['thorsync'],
+                                   'Episode_0000.h5')
 
     sync_meta_file = h5_file.with_name('ThorRealTimeDataSettings.xml')
     return h5_file, sync_meta_file, meta_file
@@ -279,8 +284,9 @@ def convert_thorsync_to_timestamps_npy(flacq, raw_dir, proc_dir, match_stack_tim
         else:
             timestamps = fix_frame_times.fix_timestamps0(SAVE_DIR.joinpath('timestamps0.npy'))
     else:
+        timestamps = timestamps0
         # if movie is single plane, it's important to match frame times and stack times
-        timestamps = fix_frame_times.fix_timestamps0(SAVE_DIR.joinpath('timestamps0.npy'))
+        # timestamps = fix_frame_times.fix_timestamps0(SAVE_DIR.joinpath('timestamps0.npy'))
 
     # correct timestamps file
     # -----------------------

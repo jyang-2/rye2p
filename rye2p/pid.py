@@ -1,31 +1,20 @@
-import os
-from pathlib import Path
-import numpy as np
-import h5py
 import json
+import numpy as np
 import utils2p
 import utils2p.synchronization
-import dotenv
 import xarray as xr
+from pathlib import Path
+
 from rye2p import trial_tensors
 
-# load .env variables
-# dotenv.load_dotenv(Path.home().joinpath('dotenv_files/natural_mixtures/.env'))
-#
-# DB_PRJ_DIR = Path(os.getenv("DB_PRJ_DIR"))
-# DB_RAW_DIR = Path(os.getenv("DB_RAW_DIR"))
-#
-# NAS_PRJ_DIR = Path(os.getenv("NAS_PRJ_DIR"))
-# NAS_PROC_DIR = Path(os.getenv("NAS_PROC_DIR"))
-# NAS_OLFCONFIG_DIR = Path(os.getenv("NAS_OLFCONFIG_DIR"))
 
-prj = 'odor_space_collab'
-
-if prj == 'odor_space_collab':
-    DB_RAW_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech "
-                      "Dropbox/Remy/odor_space_collab/raw_data")
-    NAS_PRJ_DIR = Path("/local/matrix/Remy-Data/projects/odor_space_collab")
-    NAS_PROC_DIR = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data")
+# prj = 'odor_space_collab'
+#
+# if prj == 'odor_space_collab':
+#     DB_RAW_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech "
+#                       "Dropbox/Remy/odor_space_collab/raw_data")
+#     NAS_PRJ_DIR = Path("/local/matrix/Remy-Data/projects/odor_space_collab")
+#     NAS_PROC_DIR = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data")
 
 
 # %%
@@ -98,7 +87,8 @@ def load_pid_lines(flacq):
     sync_meta = utils2p.synchronization.SyncMetadata(sync_meta_file)
 
     line_names = ['olfDispPin', 'scopePin', 'pid']
-    olf_disp_pin, scope_pin, pid = utils2p.synchronization.get_lines_from_sync_file(h5_file, line_names)
+    olf_disp_pin, scope_pin, pid = utils2p.synchronization.get_lines_from_sync_file(h5_file,
+                                                                                    line_names)
     olf_disp_pin = utils2p.synchronization.correct_split_edges(olf_disp_pin)
     scope_pin = utils2p.synchronization.correct_split_edges(scope_pin)
 
@@ -107,7 +97,8 @@ def load_pid_lines(flacq):
 
 def pid_lines_to_npz(flacq):
     """
-    Loads and saves the lines relevant to odor delivery from thorsync (.h5) recording to a compressed .npz file in
+    Loads and saves the lines relevant to odor delivery from thorsync (.h5) recording to a
+    compressed .npz file in
     natural_mixtures/processed_data.
 
     Args:
@@ -136,7 +127,8 @@ def extract_pid_trials(flacq):
     sync_meta = utils2p.synchronization.SyncMetadata(sync_meta_file)
 
     line_names = ['olfDispPin', 'scopePin', 'pid']
-    olf_disp_pin, scope_pin, pid = utils2p.synchronization.get_lines_from_sync_file(h5_file, line_names)
+    olf_disp_pin, scope_pin, pid = utils2p.synchronization.get_lines_from_sync_file(h5_file,
+                                                                                    line_names)
     olf_disp_pin = utils2p.synchronization.correct_split_edges(olf_disp_pin)
     scope_pin = utils2p.synchronization.correct_split_edges(scope_pin)
 
@@ -204,13 +196,18 @@ if __name__ == "__main__":
 # from matplotlib.backends.backend_pdf import PdfPages
 #
 # pdf = PdfPages('/local/storage/Remy/natural_mixtures/reports/pid.pdf')
-#
-# pid_netcdf_list = list(NAS_PROC_DIR.rglob('xrda_pid.nc'))
-#
-# for file in pid_netcdf_list:
-#     with xr.open_dataarray(file) as da_pid:
-#         fg = plot_pid_traces(da_pid)
-#         fg.fig.suptitle(file.relative_to(NAS_PROC_DIR))
-#         plt.show()
+NAS_PROC_DIR = Path("/local/matrix/Remy-Data/projects/natural_mixtures/processed_data")
+
+pid_netcdf_list = sorted(list(NAS_PROC_DIR.rglob('kiwi/xrda_pid.nc'))) + \
+                  sorted(list(NAS_PROC_DIR.rglob('kiwi_components_again/xrda_pid.nc')))
+pid_netcdf_list
+
+import matplotlib.pyplot as plt
+
+for file in pid_netcdf_list:
+    with xr.open_dataarray(file) as da_pid:
+        fg = plot_pid_traces(da_pid)
+        fg.fig.suptitle(file.relative_to(NAS_PROC_DIR))
+        plt.show()
 #         pdf.savefig(fg.fig)
 # pdf.close()

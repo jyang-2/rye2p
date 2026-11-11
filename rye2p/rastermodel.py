@@ -2,9 +2,9 @@ import numpy as np
 from pathlib import Path
 from scipy.stats import zscore
 from rasterviz import norm_traces
-
-import rastermap
-from rastermap.mapping import Rastermap
+#
+# import rastermap
+# from rastermap.mapping import Rastermap
 
 NAS_PROC_DIR = Path("/local/storage/Remy/natural_mixtures/processed_data")
 
@@ -12,7 +12,7 @@ stat_file_list = sorted(list(NAS_PROC_DIR.rglob('combined/stat.npy')))
 
 suite2p_ops = {'n_components': 1, 'n_X': 100, 'alpha': 1., 'K': 1.,
                'nPC': 200, 'constraints': 2, 'annealing': True, 'init': 'pca',
-               }0
+               }
 
 # %%
 stat_file = stat_file_list[0]

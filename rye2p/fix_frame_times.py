@@ -1,9 +1,10 @@
 """Fixes issues with extracting ttl pulses and timestamp information from ThorSync files"""
-import numpy as np
-from pathlib import Path
-import utils2p
 import copy
+from pathlib import Path
 from typing import Union, List
+
+import numpy as np
+import utils2p
 from scipy.optimize import linear_sum_assignment
 
 
@@ -37,7 +38,6 @@ def match_scope_times(scope_ict, scope_fct):
     return matched_scope_ict, matched_scope_fct
 
 
-# %%
 def scope_time_diff(scope_ict, scope_fct):
     # return scope_ict[:, np.newaxis] - scope_fct[np.newaxis, :]
     return scope_fct[:, np.newaxis] - scope_ict[np.newaxis, :]
@@ -99,7 +99,8 @@ def frames_by_scope_pulse(frame_times, scope_ict, scope_fct):
         scope_fct (List, np.array): scope_pulse end time (fct stands for final cross time)
 
     Returns:
-        frames_by_pulse (List[np.array]): frames falling within the first scope pulse are at frames_by_pulse[0],
+        frames_by_pulse (List[np.array]): frames falling within the first scope pulse are at
+        frames_by_pulse[0],
                                             within the second pulse at frames_by_pulse[1], etc.
 
     """
@@ -123,7 +124,8 @@ def correct_frame_times_fastz(frame_times, scope_ict, scope_fct, z_steps):
         frame_times (Union[List, np.ndarray]): frame times
         scope_ict (Union[List, tuple, np.ndarray]): interval start time
         scope_fct (Union[List, tuple, np.ndarray]): interval end time
-        z_steps (int): # of z-steps + flyback frames, or ```meta.get_n_z() + meta.get_n_flyback_frames()```
+        z_steps (int): # of z-steps + flyback frames, or ```meta.get_n_z() +
+        meta.get_n_flyback_frames()```
 
     Returns:
 
@@ -157,7 +159,8 @@ def fix_timestamp_pulse_times(timestamps):
 
 
 def fix_olf_times(timestamps0):
-    """Removes any olf times that occur outside of a scope pulse (between scope_ict and scope_fct)"""
+    """Removes any olf times that occur outside of a scope pulse (between scope_ict and
+    scope_fct)"""
     fixed_olf_ict = frames_by_scope_pulse(timestamps0['olf_ict'],
                                           timestamps0['scope_ict'],
                                           timestamps0['scope_fct'])
@@ -205,11 +208,13 @@ def fix_timestamps0(timestamps0_file):
                                               timestamps0['scope_ict'],
                                               timestamps0['scope_fct'])
 
-    stack_times_per_pulse = [item[steps_per_frame - 1::steps_per_frame] for item in split_frame_times]
+    stack_times_per_pulse = [item[steps_per_frame - 1::steps_per_frame] for item in
+                             split_frame_times]
     n_stack_times_per_pulse = [item.size for item in stack_times_per_pulse]
     fixed_stack_times = np.concatenate(stack_times_per_pulse)
 
-    frame_times_per_pulse = [item[:n * steps_per_frame] for item, n in zip(split_frame_times, n_stack_times_per_pulse)]
+    frame_times_per_pulse = [item[:n * steps_per_frame] for item, n in
+                             zip(split_frame_times, n_stack_times_per_pulse)]
     n_frame_times_per_pulse = [item.size for item in frame_times_per_pulse]
     fixed_frame_times = np.concatenate(frame_times_per_pulse)
 
@@ -232,7 +237,195 @@ def fix_timestamps0(timestamps0_file):
 
     return timestamps
 
-# if __name__ == '__main__':
+
+# %%
+
+if __name__ == '__main__':
+    # %%
+
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/"
+    #                "processed_data/2023-08-29/2/prospective0")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/"
+    #                "processed_data/2023-09-13/1/validation2c_1")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/"
+    #                "processed_data/2023-09-13/1/reference")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/"
+    #                "processed_data/2023-09-19/1/validation2e_single_plane")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/"
+    #                "processed_data/2023-09-12/1/validation2c_1")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/"
+    #                "processed_data/2023-09-14/2/validation2d_single_plane_001")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/"
+    #                "processed_data/2023-09-21/2/validation2f_single_plane")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/"
+    #                "processed_data/2023-10-03/2/validation2g_single_plane"),
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/"
+    #                "processed_data/2023-10-16/3/validation2i")
+    # mov_dir = Path(
+    #     "/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #     "2023-10-17/1/validation2j")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/"
+    #                "processed_data/2023-10-19/1/validation2k_single_plane")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                "2023-10-25/1/validation2kwm_single_plane")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                "2023-10-25/2/validation2kwm_single_plane")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                "2023-11-02/2/validation2j_single_plane")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                "2023-11-03/1/validation2iwm_single_plane")
+
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                "2023-11-03/3/validation2iwm_single_plane")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                "2023-11-07/1/validation2iwmh_single_plane")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                "2023-11-07/2/validation2iwmh_single_plane")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                "2023-11-21/1/validation2iwmh1_single_plane")
+
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                "2023-11-29/2/validation2iwmh1_single_plane_001")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                "2023-12-06/5/validation2jwmh_single_plane")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                "2023-12-06/5/validation2jwmh_single_plane_001")
+    # mov_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/"
+    #                "processed_data/2023-12-13/1/validation2kwmh")
+    # mov_dir = Path("/local/matrix/Lexi/rotation_project/processed_data/"
+    #                "2024-04-18/1/megamat06_singleplane")
+
+    # mov_dir = Path("/local/matrix/Lexi/rotation_project/processed_data/"
+    #                "2024-04-22/2/megamat06_fast_singleplane")
+    # mov_dir = Path("/local/matrix/Lexi/rotation_project/processed_data/"
+    #                "2024-05-03/1/lexi10odors_singleplane_001")
+    mov_dir = Path("/local/matrix/Lexi/rotation_project/processed_data/"
+                   "2024-05-03/2/lexi10odors_singleplane_001")
+
+    meta = utils2p.Metadata(mov_dir.joinpath("Experiment.xml"))
+
+    average_mode = int(meta.get_metadata_value("LSM", "averageMode"))
+    n_frames = int(meta.get_value('Streaming', 'frames'))
+    n_timepoints = meta.get_n_time_points()
+    n_frames_averaged = meta.get_n_averaging()
+    fast_z_mode = int(meta.get_metadata_value("Streaming", "zFastEnable"))
+
+    # %%
+    # print experiment metadata (expected frame, timepoint #)
+    print('\nExperiment.xml')
+    print('--------------')
+    print(f"n_frames = {n_frames}")
+    print(f"n_timepoints = {n_timepoints}")
+    print(f"n_frames_averaged = {n_frames_averaged}")
+    print(f"average_mode = {average_mode}")
+    print(f"fast_z_mode = {fast_z_mode}")
+
+    # print timestamp file info
+    timestamps0 = np.load(mov_dir.joinpath("timestamps0.npy"), allow_pickle=True).item()
+    print('\ntimestamps0.npy')
+    print('--------------')
+    print(f"frame_times = {timestamps0['frame_times'].size}")
+    print(f"stack_times = {timestamps0['stack_times'].size}")
+
+    timestamps = np.load(mov_dir.joinpath("timestamps.npy"), allow_pickle=True).item()
+    print('\ntimestamps.npy')
+    print('--------------')
+    print(f"frame_times = {timestamps['frame_times'].size}")
+    print(f"stack_times = {timestamps['stack_times'].size}")
+
+    # %% if recording stopped early
+
+    # dt = np.diff(timestamps0['stack_times']).mean()
+    # stack_times_append = np.arange(n_timepoints - timestamps0['stack_times'].size) + 1
+    # stack_times_append = (stack_times_append * dt) + timestamps0['stack_times'][-1]
+    #
+    # isi = np.diff(timestamps0['olf_ict']).mean()
+    # olf_pulse_len = (timestamps0['olf_fct'] - timestamps0['olf_ict']).mean()
+    #
+    # olf_ict_append = np.arange(51 - timestamps0['olf_ict'].size) + 1
+    # olf_ict_append = (olf_ict_append * isi) + timestamps0['olf_ict'][-1]
+    # olf_fct_append = olf_ict_append + olf_pulse_len
+    #
+    # olf_ict_corrected = np.concatenate((timestamps0['olf_ict'], olf_ict_append))
+    # olf_fct_corrected = np.concatenate((timestamps0['olf_fct'], olf_fct_append))
+    # stack_times_corrected = np.concatenate((timestamps0['stack_times'], stack_times_append))
+    #
+    # timestamps0['olf_ict'] = olf_ict_corrected
+    # timestamps0['olf_fct'] = olf_fct_corrected
+    # timestamps0['stack_times'] = stack_times_corrected
+
+    # %% recompute `stack_times` by downsampling timestamps0['frame_times']
+    if average_mode == 0:
+        if fast_z_mode == 0:
+            stack_times = timestamps0['frame_times']
+        elif fast_z_mode == 1:
+            stack_times = timestamps0['stack_times']
+    elif average_mode == 1:
+        stack_times = timestamps0['frame_times'][::n_frames_averaged]
+
+    print(f"recomputed stack_time size = {stack_times.size}")
+
+    # %%
+    if stack_times.size == n_timepoints:
+        timestamps0['stack_times'] = stack_times
+    elif stack_times.size == n_timepoints + 1:
+        stack_times_corrected = stack_times[:-1]
+        timestamps0['stack_times'] = stack_times_corrected
+    elif stack_times.size == n_timepoints - 1:
+        stack_times_corrected = list(stack_times)
+        dt = np.diff(stack_times).mean()
+        stack_times_corrected.append(stack_times[-1] + dt)
+        stack_times_corrected = np.array(stack_times_corrected)
+        timestamps0['stack_times'] = stack_times_corrected
+
+    fps = np.diff(timestamps0['stack_times']).mean()
+    fs = 1 / fps
+
+    # %% check timestamps0
+
+    print('\nExperiment.xml')
+    print('--------------')
+    print(f"n_frames = {n_frames}")
+    print(f"n_timepoints = {n_timepoints}")
+    print(f"n_frames_averaged = {n_frames_averaged}")
+    print(f"average_mode = {average_mode}")
+    print(f"fast_z_mode = {fast_z_mode}")
+
+    # print timestamp file info
+    print('\ntimestamps0.npy')
+    print('--------------')
+    print(f"frame_times = {timestamps0['frame_times'].size}")
+    print(f"stack_times = {timestamps0['stack_times'].size}")
+    print(f"dt = {fps}")
+    print(f"fs = {fs}")
+
+    # %% check odor pulse trials
+
+    olf_ict_mask = ((timestamps0['stack_times'][0] < timestamps0['olf_ict']) &
+                    (timestamps0['olf_ict'] < timestamps0['stack_times'][-1]))
+    olf_fct_mask = ((timestamps0['stack_times'][0] < timestamps0['olf_fct']) &
+                    (timestamps0['olf_fct'] < timestamps0['stack_times'][-1]))
+
+    if not olf_ict_mask.all():
+        print(f'Trimming odor pulse trials:'
+              f'\n\n\t- olf_ict old = {olf_ict_mask.size} trials'
+              f'\n\t- olf_ict new = {olf_ict_mask.sum()} trials'
+              f'\n\n\t- olf_fct old = {olf_fct_mask.size} trials'
+              f'\n\t- olf_fct new = {olf_fct_mask.sum()} trials'
+              )
+        olf_ict_trimmed = timestamps0['olf_ict'][olf_ict_mask]
+        olf_fct_trimmed = timestamps0['olf_fct'][olf_fct_mask]
+
+        timestamps0['olf_ict'] = olf_ict_trimmed
+        timestamps0['olf_fct'] = olf_fct_trimmed
+
+    # %%
+
+    # %%
+    np.save(mov_dir.joinpath("timestamps.npy"), timestamps0, allow_pickle=True)
+    print('timestamps.npy corrected and saved.')
+    print(mov_dir.joinpath("timestamps.npy").as_uri())
+
 #     PROC_DATA_DIR = Path("/local/storage/Remy/narrow_odors/processed_data")
 #     file_list = sorted(list(PROC_DATA_DIR.rglob('timestamps0.npy')))
 #

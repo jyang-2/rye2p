@@ -1,0 +1,31 @@
+trial_idx	pin	name	log10_conc	abbrev	stim
+0	49	paraffin	0.0	pfo	pfo @ 0.0
+1	39	ethyl butyrate	-3.5	eb	eb @ -3.5
+2	37	ethanol	-2.0	etoh	etoh @ -2.0
+3	38	isoamyl acetate	-3.7	IAA	IAA @ -3.7
+4	46	kiwi approx.	0.0	kmix	kmix @ 0.0
+5	41	kiwi approx.	-1.0	kmix	kmix @ -1.0
+6	40	kiwi approx.	-2.0	kmix	kmix @ -2.0
+7	45	isoamyl alcohol	-3.6	IAol	IAol @ -3.6
+8	47	kmix-2	0.0	ea+eb	ea+eb @ 0.0
+9	48	ethyl acetate	-4.2	ea	ea @ -4.2
+10	49	paraffin	0.0	pfo	pfo @ 0.0
+11	40	kiwi approx.	-2.0	kmix	kmix @ -2.0
+12	47	kmix-2	0.0	ea+eb	ea+eb @ 0.0
+13	46	kiwi approx.	0.0	kmix	kmix @ 0.0
+14	48	ethyl acetate	-4.2	ea	ea @ -4.2
+15	37	ethanol	-2.0	etoh	etoh @ -2.0
+16	45	isoamyl alcohol	-3.6	IAol	IAol @ -3.6
+17	41	kiwi approx.	-1.0	kmix	kmix @ -1.0
+18	38	isoamyl acetate	-3.7	IAA	IAA @ -3.7
+19	39	ethyl butyrate	-3.5	eb	eb @ -3.5
+20	49	paraffin	0.0	pfo	pfo @ 0.0
+21	46	kiwi approx.	0.0	kmix	kmix @ 0.0
+22	38	isoamyl acetate	-3.7	IAA	IAA @ -3.7
+23	39	ethyl butyrate	-3.5	eb	eb @ -3.5
+24	47	kmix-2	0.0	ea+eb	ea+eb @ 0.0
+25	45	isoamyl alcohol	-3.6	IAol	IAol @ -3.6
+26	40	kiwi approx.	-2.0	kmix	kmix @ -2.0
+27	48	ethyl acetate	-4.2	ea	ea @ -4.2
+28	41	kiwi approx.	-1.0	kmix	kmix @ -1.0
+29	37	ethanol	-2.0	etoh	etoh @ -2.0

@@ -1,6 +1,7 @@
 import typing
 import pydantic
-
+from typing import List
+from pathlib import Path
 
 
 class Fly(pydantic.BaseModel):
@@ -33,34 +34,72 @@ class LinkedThorAcquisition(pydantic.BaseModel):
     notes: typing.Optional[str]
 
 
-class FlyWithAcquisitions(pydantic.BaseModel):
-    """ Fly info, including list of linked thor acquisitions.
-
-    Used to parse data in {NAS_PRJ_DIR}/manifestos/linked_thor_acquisitions.yaml
-
-    Example:
-    -------
-
-        # load linked thorlabs acquisitions (by fly) from yaml manifest
-        with open(NAS_PRJ_DIR.joinpath("manifestos/linked_thor_acquisitions.yaml"), 'r') as f:
-            linked_acq = yaml.safe_load(f)
-
-        # parse w/ pydantic model
-        flies_with_acq = [FlyWithAcquisitions(**item) for item in linked_acq]
-
-    """
+class OldFlatOdorSpaceAcquisition(pydantic.BaseModel):
     date_imaged: str = pydantic.Field(...)
     fly_num: int = pydantic.Field(...)
-    linked_thor_acquisitions: typing.List[LinkedThorAcquisition]
+    thorimage: str = pydantic.Field(...)
+    thorsync: typing.Optional[str]
+    # fly_id: int = pydantic.Field(...)
+    # expt_id: int = pydantic.Field(...)
+    olf_config: typing.Optional[str]
+    panel: typing.Optional[str]
+    pin_sequence: typing.Optional[List[int]]
+    bad_trials: typing.Optional[List]
+    imaging_type: typing.Optional[str]
+    s2p_stat_file: typing.Optional[str]
+
+    def filename_base(self):
+        return f"{self.date_imaged}__fly{self.fly_num:02}__{self.thorimage}"
+
+    # def expt_dir(self, relative_to=None):
+    #     if relative_to is None:
+    #         parent_dir = Path(".")
+    #     else:
+    #         parent_dir = relative_to
+    #     return parent_dir.joinpath(str(self.fly_id), str(self.expt_id))
+    #
+    # def fly_dir(self, relative_to=None):
+    #     if relative_to is None:
+    #         parent_dir = Path(".")
+    #     else:
+    #         parent_dir = relative_to
+    #     return parent_dir.joinpath(str(self.fly_id))
+
+    def fly_dir(self, relative_to=None):
+        if relative_to is None:
+            parent_dir = Path(".")
+        else:
+            parent_dir = relative_to
+        fly_dir = parent_dir.joinpath(self.date_imaged, self.fly_num)
+        return fly_dir
+
+    def mov_dir(self, relative_to=None):
+        if relative_to is None:
+            parent_dir = Path(".")
+        else:
+            parent_dir = relative_to
+        mov_dir = parent_dir.joinpath(self.date_imaged, self.fly_num, self.thorimage)
+        return mov_dir
+
+    def stat_file(self, relative_to=None):
+        if self.s2p_stat_file is None:
+            stat_file = None
+        else:
+            if relative_to is None:
+                parent_dir = Path(".")
+            else:
+                parent_dir = relative_to
+            stat_file = parent_dir / Path(self.s2p_stat_file)
+        return stat_file
 
 
-class ThorSyncLineTimes(pydantic.BaseModel):
-    frame_times: list[float]
-    stack_times: list[float]
-    scope_ict: list[float]
-    scope_fct: list[float]
-    olf_ict: list[float]
-    olf_fct: list[float]
+# class ThorSyncLineTimes(pydantic.BaseModel):
+#     frame_times: list[float]
+#     stack_times: list[float]
+#     scope_ict: list[float]
+#     scope_fct: list[float]
+#     olf_ict: list[float]
+#     olf_fct: list[float]
 
 
 class PinOdor(pydantic.BaseModel):

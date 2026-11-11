@@ -1,6 +1,6 @@
 import copy
 from pathlib import Path
-import dateparser
+# import dateparser
 import utils2p
 import shutil
 import numpy as np
@@ -66,7 +66,6 @@ def edit_timestamps(timestamps, tsub, drop_frames=None):
                                  dims=['time'])
 
 
-# %%
 def imread_stk_dir(stk_dir):
     tiff_files = sorted(list(stk_dir.glob("*.tif")))
 
@@ -88,8 +87,12 @@ def imread_stk_dir(stk_dir):
     return tiff_stacks, axes_list, ij_meta_list
 
 
-def downsample_from_tiff(tiff_file, tsub, frames_to_drop=None, agg='sum'):
+def downsample_from_tiff(tiff_file, tsub, frames_to_drop=None, agg='sum',
+                         ):
     stack0 = utils2p.load_img(tiff_file, memmap=True)
+    if stack0.ndim == 3:
+        stack0 = np.expand_dims(stack0, 1)
+
     axes = 'TZYX'
     dims = [item for item in str.lower(axes)]
     t, z, y, x = stack0.shape
@@ -122,9 +125,9 @@ def downsample_from_tiff(tiff_file, tsub, frames_to_drop=None, agg='sum'):
         da_stack = copy.deepcopy(da_stack0)
 
     if agg == 'sum':
-        da_stack = da_stack.coarsen(t=tsub, boundary='trim').sum()
+        da_stack = da_stack.coarsen(t=tsub, boundary='trim').sum().astype('uint16')
     elif agg == 'mean':
-        da_stack = da_stack.coarsen(t=tsub, boundary='trim').mean()
+        da_stack = da_stack.coarsen(t=tsub, boundary='trim').mean().astype('float32')
 
     if timestamps_loaded:
         timestamps_ds = copy.deepcopy(timestamps)
@@ -138,7 +141,12 @@ def downsample_from_tiff(tiff_file, tsub, frames_to_drop=None, agg='sum'):
 
 def downsample_from_stk_dir(stk_dir, tsub, frames_to_drop=None, agg='mean'):
     tiff_list = sorted(list(stk_dir.glob("*.tif")))
-    stack0 = np.concatenate([tifffile.imread(x) for x in tiff_list], axis=0)
+    # stack0 = np.concatenate([tifffile.imread(x, memmap=True) for x in tiff_list], axis=0)
+    stack0 = np.concatenate([tifffile.memmap(x) for x in tiff_list], axis=0)
+
+    # fix dimensions if single plane movie
+    if stack0.ndim == 3:
+        stack0 = np.expand_dims(stack0, 1)
     axes = 'TZYX'
     dims = [item for item in str.lower(axes)]
     t, z, y, x = stack0.shape
@@ -182,9 +190,19 @@ def downsample_from_stk_dir(stk_dir, tsub, frames_to_drop=None, agg='mean'):
 
 
 def downsample_and_save_acquisition(stk_dir, tsub, frames_to_drop, agg='mean'):
-    da_stack, timestamps_ds = downsample_from_stk_dir(stk_dir, tsub, frames_to_drop=frames_to_drop, agg=agg)
-    src_dir = stk_dir.parent
-    mov_name = src_dir.name
+    if stk_dir.is_dir():
+        da_stack, timestamps_ds = downsample_from_stk_dir(stk_dir, tsub,
+                                                          frames_to_drop=frames_to_drop,
+                                                          agg=agg)
+        src_dir = stk_dir.parent
+        mov_name = src_dir.name
+    elif stk_dir.is_file() and stk_dir.suffix == '.tif':
+        da_stack, timestamps_ds = downsample_from_tiff(stk_dir, tsub,
+                                                       frames_to_drop=frames_to_drop,
+                                                       agg=agg)
+        src_dir = stk_dir.parent
+        mov_name = src_dir.name
+    print('done downsampling')
 
     # make new folder for downsampled acquisition
     target_dir = src_dir.with_name(f"{mov_name}_tsub{tsub:02d}")
@@ -194,13 +212,15 @@ def downsample_and_save_acquisition(stk_dir, tsub, frames_to_drop, agg='mean'):
     utils2p.save_img(target_dir.joinpath("Image_001_001.tif"), stack_ds)
     np.save(target_dir.joinpath('timestamps.npy'), timestamps_ds)
 
-    convert_raw_fn_thorimage.split_tiff_files(target_dir.joinpath("Image_001_001.tif"), frames_per_batch=500)
+    convert_raw_fn_thorimage.split_tiff_files(target_dir.joinpath("Image_001_001.tif"),
+                                              frames_per_batch=500)
     return target_dir
 
 
 def edit_movie_and_timestamps(file, tsub, frames_to_drop=None, agg='sum'):
     """
-    stk_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data_old/2019-03-06/4/_003/stk")
+    stk_dir = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data_old/2019-03
+    -06/4/_003/stk")
 
     Args:
         file ():
@@ -263,11 +283,87 @@ def edit_movie_and_timestamps(file, tsub, frames_to_drop=None, agg='sum'):
 
 # %%
 if __name__ == '__main__':
-    for thorimage_name in ['fn_0004', 'fn_0005']:
-        folder_tsub = downsample_and_save_acquisition(
-                Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data_old/2019-04-26/4")
-                .joinpath(thorimage_name, 'stk'),
-                frames_to_drop=None,
-                tsub=3,
-                agg='sum'
-                )
+    # %%
+    # folder = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #               "2023-04-15/1/megamat1_single_plane_001/stk")
+
+    # folder = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #               "2023-05-10/1/megamat1_calyx/stk")
+
+    # folder = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #               "2023-09-14/2/validation2d_single_plane_001/stk")
+
+    # folder = Path("/local/matrix/Remy-Data/projects/odor_space_collab/"
+    #               "processed_data/2023-09-21/1/validation2f/stk")
+    # tiff_file = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                  "2023-09-21/1/validation2f_single_plane/stk")
+
+    # tiff_file = Path("/local/matrix/Remy-Data/projects/odor_space_collab/"
+    #                  "processed_data/2023-10-17/2/validation2j_001/stk")
+
+    # tiff_file = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                  "2023-10-17/2/validation2j_001/Image_001_001.tif")
+
+    # tiff_file = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                  "2023-10-19/1/validation2k/Image_001_001.tif")
+    # tiff_file = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                  "2023-10-25/1/validation2kwm/Image_001_001.tif")
+
+    # tiff_file = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                  "2023-11-07/2/validation2iwmh/Image_001_001.tif")
+
+    # tiff_filepath = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                      "2023-11-21/1/validation2iwmh1/Image_001_001.tif")
+
+    # tiff_file = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                  "2023-11-21/2/validation2iwmh1/Image_001_001.tif")
+    # tiff_filepath = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                      "2023-11-29/4/validation2iwmh1_single_repeat/Image_001_001.tif")
+
+    # tiff_filepath = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                      "2023-11-29/3/validation2iwmh1/Image_001_001.tif")
+
+    # tiff_filepath = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                      "2023-11-29/4/validation2iwmh1/Image_001_001.tif")
+    # tiff_filepath = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                      "2023-11-29/2/validation2iwmh1_single_plane/Image_001_001.tif")
+
+    # tiff_filepath = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                      "2023-11-29/2/validation2iwmh1_single_plane_001/Image_001_001.tif")
+
+    # tiff_filepath = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                      "2023-11-29/2/validation2iwmh1/Image_001_001.tif")
+    # tiff_filepath = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                      "2023-12-06/5/validation2jwmh_single_plane/Image_001_001.tif")
+    # tiff_filepath = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                      "2023-12-06/5/validation2jwmh_single_plane_001/Image_001_001.tif")
+    # tiff_filepath = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                      "2023-12-06/1/validation2jwmh_001/Image_001_001.tif")
+
+    # tiff_filepath = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                      "2023-12-06/2/validation2jwmh_001/Image_001_001.tif")
+
+    # tiff_filepath = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                      "2023-12-19/1/validation2kwmh/Image_001_001.tif")
+    # tiff_filepath = Path("/local/matrix/Remy-Data/projects/odor_space_collab/processed_data/"
+    #                      "2023-12-19/2/validation2kwmh/Image_001_001.tif")
+
+    # tiff_filepath = Path("/local/matrix/Lexi/rotation_project/processed_data/"
+    #                      "2024-04-22/2/megamat06_fast_singleplane/Image_001_001.tif")
+    # tiff_filepath = Path("/local/matrix/Lexi/rotation_project/processed_data/"
+    #                      "2024-04-22/1/megamat06_fast_001/Image_001_001.tif")
+    tiff_filepath = Path("/local/matrix/Lexi/rotation_project/processed_data/"
+                         "2024-04-22/2/megamat06_fast_001/Image_001_001.tif")
+
+    folder_tsub = downsample_and_save_acquisition(tiff_filepath,
+                                                  tsub=3,
+                                                  frames_to_drop=None,
+                                                  agg='sum'
+                                                  )
+
+    # copy files to downsampled folder
+    files_to_copy = ['Experiment.xml', 'df_pins2odors.csv', 'df_stim.csv', 'stim_list.json']
+    for file in files_to_copy:
+        shutil.copyfile(tiff_filepath.with_name(file), folder_tsub.joinpath(file))
+
+    # %%

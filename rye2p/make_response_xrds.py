@@ -5,7 +5,10 @@ import pydantic
 import typing
 from typing import List
 import yaml
-#%%
+from scipy.io import loadmat
+
+
+# %%
 class OdorSpaceFly(pydantic.BaseModel):
     fly_id: int
     date_imaged: str
@@ -15,31 +18,46 @@ class OdorSpaceFly(pydantic.BaseModel):
     sex: str
     expt_list: typing.List[int]
 
-#%%
-DBX_PROC_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/"
-                    "HongLab @ Caltech Dropbox/Remy/mb_odor_space/processed-data")
 
-NAS_PROC_DIR = Path("/local/storage/Remy/mb_odor_space/xarray_data")
+class FlatOdorSpaceAcquisition(pydantic.BaseModel):
+    fly_id: int
+    date_imaged: str
+    expt_id: int
+    thorimage: str
+    fly_num: int
+    genotype: str
+    date_eclosed: str
+    sex: str
 
 
+# %%
+from rye2p import datadirs
+datadirs.set_prj('mb_odor_space')
+
+DBX_PRJ_DIR = Path("/media/remy/remy-storage/Remy's Dropbox Folder/HongLab @ Caltech Dropbox/Remy/mb_odor_space")
+DBX_PROC_DIR = DBX_PRJ_DIR.joinpath("processed-data")
 
 # %% load mb_odor_space fly manifest
 # ==================================
 
 MANIFEST_DIR = DBX_PROC_DIR.with_name('manifestos')
 
-
 with open(MANIFEST_DIR.joinpath('fly_manifest.yaml'), 'r') as f:
     fly_manifest = yaml.safe_load(f)
 
 fly_manifest = pydantic.parse_obj_as(List[OdorSpaceFly], fly_manifest)
 print(fly_manifest)
-#%%
+# %%
 
-#NAS_PROC_DIR = DBX_PROC_DIR.with_name('xarray_data')
+# NAS_PROC_DIR = DBX_PROC_DIR.with_name('xarray_data')
 
 # get list of .npy files
 file_list = sorted(list(DBX_PROC_DIR.rglob('response_xrds.npy')))
+
+for file in file_list:
+    print(file.relative_to(DBX_PROC_DIR))
+# %%
+# for megamat flies [1, 12, 14],
 
 for file in file_list:
     response_xrds_npy = np.load(file, allow_pickle=True).item()
@@ -65,6 +83,3 @@ for file in file_list:
     print(save_file)
 
     ds.to_netcdf(save_file)
-
-
-
