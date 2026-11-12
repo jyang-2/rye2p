@@ -1,0 +1,81 @@
+site_name: rye2p
+site_description: Convert and parse ThorImage and ThorSync data from 2p imaging experiments
+repo_url: https://github.com/jyang-2/rye2p
+repo_name: jyang-2/rye2p
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - toc.integrate
+
+markdown_extensions:
+  - admonition
+  - tables
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - toc:
+      permalink: true
+
+# strict link checking (legacy-code docstring-style warnings from griffe are
+# tolerated; broken links/nav are not)
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+  links:
+    not_found: warn
+    anchors: warn
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            docstring_style: google
+            show_source: true
+            members_order: source
+            show_root_heading: true
+
+nav:
+  - Overview: index.md
+  - How the pipeline works: pipeline.md
+  - Timestamps explained: timestamps.md
+  - Output file reference: outputs.md
+  - Directory layout: directory-layout.md
+  - Tutorials:
+      - Convert raw movies to tiff: tutorials/convert-raw.md
+      - Extract timestamps from ThorSync: tutorials/extract-timestamps.md
+      - Per-plane timestamps for volumetric analysis: tutorials/per-plane-timestamps.md
+  - API reference:
+      - thorsync.timestamps: api/thorsync-timestamps.md
+      - thorsync.linenames: api/thorsync-linenames.md
+      - thorimage.settings: api/thorimage-settings.md
+      - thorimage.io: api/thorimage-io.md
+      - process_thorsync (legacy): api/process-thorsync.md
+      - fix_frame_times: api/fix-frame-times.md
+      - pipeline.raw: api/pipeline-raw.md
+      - movie: api/movie.md
+      - olf_configs: api/olf-configs.md
+      - thormatch: api/thormatch.md
+      - trial_tensors: api/trial-tensors.md
+  - Known issues: known-issues.md
+  - Refactor roadmap: roadmap.md
