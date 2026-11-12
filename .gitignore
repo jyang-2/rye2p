@@ -1,5 +1,21 @@
 .idea/
-docs/
+.run/
 __pycache__/
+*.pyc
 identifier.sqlite
 
+# virtualenvs
+.venv/
+venv/
+
+# built docs site (sources in docs/ ARE tracked)
+site/
+
+# build artifacts
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# jupyter
+.ipynb_checkpoints/

@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rye2p"
+version = "2026.11"
+description = "Convert and parse ThorImage and ThorSync data from 2p imaging experiments"
+authors = [{ name = "remy", email = "jyang2@caltech.edu" }]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "h5py",
+    "utils2p",
+    "scipy",
+    "pandas",
+    "pyyaml",
+    "tifffile",
+    "attrs",
+    "cattrs",
+    "fuzzywuzzy",
+    "tqdm",
+    "xarray",
+    "matplotlib",
+    "pendulum",
+]
+
+[project.urls]
+Homepage = "https://github.com/jyang-2/rye2p"
+
+[project.optional-dependencies]
+dev = ["pytest"]
+# pymdown-extensions 12.x breaks mkdocstrings' Highlighter (TypeError: missing 'md')
+docs = ["mkdocs-material", "mkdocstrings[python]", "pymdown-extensions<12"]
+
+[tool.setuptools.packages.find]
+include = ["rye2p*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
