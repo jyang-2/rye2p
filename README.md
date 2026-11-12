@@ -6,6 +6,7 @@ stimulus on/off times, and microscope trigger times.
 
 > 🧭 **Lost? Start here.** This README is the landing page — every important
 > file and doc is linked below.
+> **What's in flight right now** → [WORKLOG.md](WORKLOG.md) (NOW block at the top).
 
 ## What do you need right now?
 
