@@ -48,6 +48,7 @@ use; unification is in progress on the `cleanup` branch — see the
 ```bash
 python -m venv .venv
 .venv/bin/pip install -e ".[dev,docs]"   # needs utils2p (editable checkout at ~/git/utils2p)
+git config core.hooksPath .githooks      # enables the docs-reminder pre-commit hook
 ```
 
 Run tests:

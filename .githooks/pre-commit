@@ -1,0 +1,19 @@
+#!/bin/sh
+# Warn-only reminder: code changed without touching docs or the worklog.
+# Never blocks the commit (always exits 0) — deliberately, so it stays
+# trusted instead of getting bypassed with --no-verify.
+#
+# Enable once per clone with:  git config core.hooksPath .githooks
+
+staged=$(git diff --cached --name-only)
+
+if echo "$staged" | grep -q '^rye2p/' && \
+   ! echo "$staged" | grep -qE '^(docs/|WORKLOG\.md)'; then
+    echo "" >&2
+    echo "  ⚠  rye2p/ code is in this commit, but no docs/ or WORKLOG.md change." >&2
+    echo "     If behavior, outputs, or status changed, update them (docs/known-issues.md," >&2
+    echo "     docs/roadmap.md, WORKLOG.md). If not needed, carry on — this is only a reminder." >&2
+    echo "" >&2
+fi
+
+exit 0

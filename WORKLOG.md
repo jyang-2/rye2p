@@ -31,6 +31,10 @@ source of truth for what's in flight — update it before stopping work.
   catalog, refactor roadmap. `mkdocs serve` → localhost:8000.
 - README landing page; local-only `CLAUDE.md` (gitignored, never in git history).
 - Junk removed: stray `None` PDF, `.run/`, empty Sphinx skeleton.
+- Docs-drift enforcement: CI workflow (pytest + mkdocs build, fails on broken
+  links) and warn-only pre-commit hook (`.githooks/`, enabled via
+  `git config core.hooksPath .githooks`). Principle adopted: prefer generated
+  docs (docstrings, tests pinning invariants) over prose.
 
 **Why**
 - Repo had three coexisting pipeline generations (flat legacy modules, half-built

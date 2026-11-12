@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # Tests import modules directly by file path, so the full scientific
+      # stack (utils2p, h5py, ...) is not needed here.
+      - run: pip install numpy pytest
+      - run: python -m pytest
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # pymdown-extensions 12.x breaks mkdocstrings (see pyproject.toml)
+      - run: pip install mkdocs-material "mkdocstrings[python]" "pymdown-extensions<12"
+      # Fail on broken links / nav / unresolved API references, but tolerate
+      # griffe docstring-style warnings from legacy modules (docs/roadmap.md
+      # step 6 cleans those up).
+      - run: |
+          set -o pipefail
+          mkdocs build 2>&1 | tee mkdocs-build.log
+          if grep -E "WARNING.*(contains a link|not found|nav configuration|autorefs)" mkdocs-build.log; then
+            echo "::error::Docs have broken links or references (see lines above)"
+            exit 1
+          fi
