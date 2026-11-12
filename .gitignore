@@ -20,7 +20,9 @@ dist/
 # jupyter
 .ipynb_checkpoints/
 
-# local AI-assistant instructions (not for GitHub)
+# local AI-assistant instructions (not for GitHub; versioned separately
+# in .claude-local.git — see "git local" alias)
 CLAUDE.md
 CLAUDE.local.md
 .claude/
+.claude-local.git/

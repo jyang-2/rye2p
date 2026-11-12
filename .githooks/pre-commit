@@ -16,4 +16,22 @@ if echo "$staged" | grep -q '^rye2p/' && \
     echo "" >&2
 fi
 
+# Auto-snapshot local-only AI files (CLAUDE.md, .claude/) into the separate
+# local repo .claude-local.git, if it exists. Keeps them version-controlled
+# without ever entering the public repo.
+# IMPORTANT: git exports GIT_INDEX_FILE/GIT_DIR into hooks; they must be
+# scrubbed or the inner git calls corrupt the MAIN repo's index.
+if [ -d .claude-local.git ]; then
+    localgit() {
+        env -u GIT_INDEX_FILE -u GIT_DIR -u GIT_WORK_TREE \
+            git --git-dir=.claude-local.git --work-tree=. "$@"
+    }
+    localgit add -f -A CLAUDE.md .claude 2>/dev/null
+    if ! localgit diff --cached --quiet 2>/dev/null; then
+        localgit commit -q \
+            -m "snapshot $(date +%F) (alongside main commit on $(git branch --show-current 2>/dev/null))" \
+            && echo "  (CLAUDE.md/.claude snapshot saved to local repo — 'git local log' to view)" >&2
+    fi
+fi
+
 exit 0
