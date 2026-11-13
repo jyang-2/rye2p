@@ -10,7 +10,10 @@ checkpoint commit (`67ee170`). Roadmap steps that fix each are noted.
    with no `fast_z` guard (`get_n_z()` reads `ZStage/steps`, which isn't forced
    to 1 for single-plane recordings), then `:307` decimates *again* by
    `n_averaging`. `FunctionalImagingSettings.from_xml` has the correct logic;
-   the notebook path reads it and is trustworthy. *Fix: roadmap step 2.*
+   the notebook path reads it and is trustworthy. Confirmed in the wild
+   (2026-11-12): single-plane `timestamps0.npy` files on 2023-04-11/2 carry
+   the `steps_per_frame=20` garbage (`stack_times` = 4,606 = frames/20); the
+   final files were later hand-rescued (see #24). *Fix: roadmap step 2.*
 
 2. **Stack-time convention conflict** (re-attributed by the 2026-11-12
    ground-truth check, see #22) — the notebooks stamp each volume with its
@@ -125,3 +128,16 @@ its saved outputs; the legacy extraction was reproduced **bit-exactly** from
     discards the first scope falling edge (`scope_fct = ...[1:]`) as an
     unexplained rig-specific hack. *Fix: compute edges at full rate in
     `thorsync/lines.py`, roadmap steps 1–2.*
+
+24. **Hand-rescued single-plane files are internally inconsistent** —
+    single-plane `timestamps.npy` files repaired via the
+    `fix_frame_times.py::__main__` scratchpad (≈ lines 383–414) have
+    `stack_times = frame_times[::n_averaging]` **plus one extrapolated final
+    entry** (appended when the count came up one short — the real cause was
+    the dropped first frame, #22). Verified on 2023-04-11/2
+    `megamat1_calyx{,_001}`: `stack_times[:-1] == frame_times[::n_averaging]`
+    exactly; every timestamp one raw frame (~16.6 ms) late; last entry
+    synthetic; `frame_times` left unrepaired (92,124 ≠ 23,032×4 resp.
+    92,125×1), and `timestamps0.npy` still holds the #1-bug garbage
+    `stack_times` (4,606 = frames/20). *Fix: re-extract after the #22 fix,
+    roadmap step 2; the `__main__` scratchpad retires into `thorsync/repair.py`.*

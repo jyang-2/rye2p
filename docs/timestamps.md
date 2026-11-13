@@ -262,6 +262,30 @@ frame of each averaging block. `FunctionalImagingSettings.from_xml` is the one
 place that derives this correctly; the legacy `process_thorsync.py` has a
 double-decimation bug here (see [known issues](known-issues.md)).
 
+!!! danger "What single-plane files in the wild actually contain (ground-truthed 2026-11-12)"
+    Verified on `odor_space_collab` 2023-04-11 fly 2's two calyx recordings
+    (`megamat1_calyx`, 4× averaging, 23,032 timepoints; `megamat1_calyx_001`,
+    no averaging, 92,125 timepoints):
+
+    - **`timestamps0.npy`** carries both extraction bugs: `frame_times` is
+      missing the first physical frame (issue #22), and `stack_times` is
+      garbage — 4,606 entries from `steps_per_frame = n_z + n_flyback = 20`,
+      because `ZStage/steps` reads 16 even when fast-z is off (issue #1).
+      (`thorimage_settings.yaml` gets it right: `fast_z: false`, `n_z: 1`,
+      `steps_per_frame = n_averaging`.)
+    - **`timestamps.npy`** was repaired by hand via the
+      `fix_frame_times.py` `__main__` rescue scratchpad (≈ lines 383–414):
+      `stack_times = frame_times[::n_averaging]`, and because that comes up
+      one short (the dropped first frame), **one extrapolated entry
+      (`last + mean dt`) is appended** to reach `n_timepoints`. Verified:
+      `stack_times[:-1] == frame_times[::n_averaging]` exactly in both files.
+    - Net effect: every saved frame's timestamp is **one raw frame
+      (~16.6 ms) late** (with averaging: the *second* raw frame of each block,
+      not the documented first), the final entry is synthetic, and
+      `frame_times` was left unrepaired, so
+      `len(frame_times) != len(stack_times) × n_averaging` — the file is
+      internally inconsistent (issue #24).
+
 ## What `fix_frame_times.py` repairs
 
 Real recordings misbehave; this module contains the repairs, applied between

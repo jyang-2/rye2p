@@ -17,6 +17,25 @@ Raw and processed data mirror each other with the same three-level scheme:
   either by the manifest (`flat_linked_thor_acquisitions.json`), by
   `thormatch` (file-mtime overlap), or by hand in a notebook.
 
+### The experiment log: `stimulus_info_<date>.yaml`
+
+Each date folder holds a hand-written experiment log,
+`<RAW_ROOT>/<date>/stimulus_info_<date>.yaml` (copied to
+`<PROC_ROOT>/<date>/` too). It is **never machine-read** — YAML is used only
+because it renders nicely in the rig's text editor and acts as a fill-in
+template — but it is the **authoritative record of the
+ThorImage ↔ ThorSync ↔ olf_config pairing**, which no data file encodes:
+a session header (rig, experimenter, olfactometer, laser, `flies:`
+genotype list in fly-number order), then a list of acquisition entries grouped
+by `# fly NN` comments, each naming `ThorImage`, `ThorSync` (`null` for
+anatomy stacks), `olf_config`, laser power, and free-text notes (frame counts,
+single-plane/averaging settings, problems). Flies marked "don't analyze"
+simply have no `<PROC_ROOT>/<date>/<fly>/` folder. Because entries are
+hand-written, verify the pairing against the data fingerprints described in
+[Timestamps explained → Validation](timestamps.md#validation) before trusting
+it — the 2026-11 ground-truth check found the log correct where checked
+(2023-04-11 fly 2).
+
 ## Storage roots
 
 Historically three machines/mounts (`rye2p/datadirs.py`):

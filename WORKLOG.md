@@ -34,8 +34,12 @@ Fresh sessions are cheap — this file is the handoff.
 - **Heads-up for downstream work:** legacy `timestamps.npy` files (e.g. all
   odor_space_collab-era) have `stack_times[i]` = first plane of volume i+1
   (~337 ms late) and `frame_times` one frame late — see known issues #22 and
-  docs/timestamps.md. Also: ThorSync↔ThorImage pairings need fingerprint
-  verification (2023-04-11/2: megamat1↔SyncData001, NOT SyncData003).
+  docs/timestamps.md. Single-plane files: hand-rescued stack_times are one
+  raw frame (~16.6 ms) late with a synthetic final entry, frame_times
+  unrepaired (issue #24). Authoritative pairing record =
+  `stimulus_info_<date>.yaml` in the date folder (human log, never
+  machine-read; 2023-04-11/2: megamat1↔SyncData001 confirmed by log AND
+  data fingerprints).
 - **Parallel sessions:** before starting a second simultaneous session, claim a
   line here (branch + worktree path), e.g.
   `- session B: branch fix-timing, worktree ../rye2p-timing`.
