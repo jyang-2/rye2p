@@ -20,9 +20,13 @@
 #Global
 #	<HDF5 dataset "GCtr": shape (51519000, 1), type "<u8">
 #
-# Notes from the ground-truth check (see docs/timestamps.md "Line inventory"):
+# Notes from the ground-truth check (see docs/timestamps.md "Line inventory";
+# SyncData003 is a single-plane recording — fast-z behaviors checked on
+# SyncData001 of the same fly):
 # - All six AI lines are analog float64; the TTLs (scopePin, olfDispPin,
 #   lightpathshutter) swing ~0-5 V, so the legacy 2.5 V edge thresholds work here.
+# - PiezoMonitor reads out piezo z: on fast-z a per-volume staircase
+#   (~34 mV/plane, repeatable to ~1-2 mV); near-constant on single-plane.
 # - FrameIn was constant 0; FrameOut toggles 0<->2 (not 0/1).
 # - Freq/FitHz and Freq/Hz were all-zero (unused ThorSync feature).
 # - Global/GCtr is the 20 MHz board timebase latched per sample, not a frame counter.

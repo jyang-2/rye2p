@@ -34,14 +34,16 @@ The mapping from canonical names to each rig's actual h5 dataset names lives in
 Everything actually inside a ThorSync `.h5`, per rig. Upstairs was verified
 2026-11-12 against a real acquisition
 (`odor_space_collab/raw_data/2023-04-11/2/SyncData003/Episode001.h5`,
-51,519,000 samples @ 30 kHz); the downstairs listing is the dump recorded in
+51,519,000 samples @ 30 kHz — a single-plane recording; fast-z–specific
+behaviors were verified on `SyncData001` of the same fly). The downstairs
+listing is the dump recorded in
 `data/microscopes/downstairs-2p/thorsync_lines.yaml`.
 
 **Upstairs** (11 datasets — exactly the 9 canonical lines plus `Freq/` and `Global/`):
 
 | dataset | group | dtype | observed (verified acquisition) |
 |---|---|---|---|
-| `PiezoMonitor` | `AI` | f8 | **near-constant (0.196–0.201 V) even during fast-z** — not a usable z-sweep monitor on this rig |
+| `PiezoMonitor` | `AI` | f8 | analog readout of the piezo z position. On the fast-z episode (`SyncData001`): a clean per-volume staircase — 16 ascending steps of ~34 mV (one per imaging plane) + a 4-frame flyback descent, per-plane values repeatable to ~1–2 mV → each plane's piezo level is distinguishable, usable as an independent check of plane identity / volume phase. Near-constant on single-plane recordings (as in `SyncData003`) |
 | `Pockels1Monitor` | `AI` | f8 | 0.03–0.38 V, analog |
 | `lightpathshutter` | `AI` | f8 | 0–4.0 V TTL; 2 pulses bracketing the acquisition |
 | `olfDispPin` | `AI` | f8 | 0–4.9 V TTL; one pulse per stimulus (51 pulses = 51 stimuli in `stim_list.json`) |
@@ -162,6 +164,44 @@ So for a fast-z movie of shape `(T, n_z, Y, X)`:
 
 - `len(frame_times) == T * (n_z + n_flyback)` → **cannot** index the movie directly.
 - `len(stack_times) == T` → indexes volumes 1:1, but throws away within-volume timing.
+
+### Which acquired frames reach the movie
+
+A frame being acquired (counted by `FrameCounter`) does **not** mean it is in
+the saved `.raw`/tiff. ThorImage records while the `scopePin` trigger is high;
+the piezo steps through its programmed z-sweep regardless of where the trigger
+falls, and the scanner keeps running for a few frames (~2–3 observed) after
+the trigger drops. The save rules, as verified on the 2023-04-11 fly 2
+acquisitions (raw file sizes match `Experiment.xml` `frames` **byte-exactly**
+in all three recordings — `bytes / (pixelX × pixelY × 2)`):
+
+- **Saving starts at the very first acquired frame** (no frames dropped at the
+  start).
+- **Fast-z: frames from an incomplete volumetric sweep are not written.**
+  `megamat1`: 90,752 frames counted, ~90,750 within the scope window, but the
+  movie holds exactly 90,740 = 4,537 complete volumes × 20 steps — the
+  12-frame partial 4,538th sweep was discarded entirely, including its ~9
+  frames that fell *inside* the scope window.
+- **Single-plane: every frame whose acquisition started inside the scope
+  window is saved.** `megamat1_calyx_001`: 92,127 counted → 92,125 saved =
+  exactly the frames that started before the trigger fell.
+
+**Unresolved**: whether a *completed* sweep whose final frames fall after the
+trigger drops would be kept. The verified data cannot distinguish this from
+the strict everything-in-window rule — the scanner overrun (~3 frames) is
+shorter than a volume, and the last complete volume ended well inside the
+window, so both rules predict the same file. Until an acquisition where the
+trigger falls within the last few frames of a sweep says otherwise, don't
+assume either rule.
+
+The robust recipe (what the notebook path implements): crop frame times to the
+scope-pin window **with a few frame-periods of padding at the end**, then keep
+the first `n_timepoints × steps_per_frame` of them, taking `n_timepoints` from
+`Experiment.xml` / `thorimage_settings.yaml` — which is ground truth for the
+file's actual content (byte-exact, above). Count from the *true first frame*
+(the legacy path loses it — known issue #22). The `PiezoMonitor` staircase
+(see the line inventory) gives an independent empirical check that frame 0 of
+each kept block really is the top/first plane.
 
 ## Per-plane timestamps (what volumetric analyses should use)
 
