@@ -57,6 +57,17 @@ Fresh sessions are cheap — this file is the handoff.
   links) and warn-only pre-commit hook (`.githooks/`, enabled via
   `git config core.hooksPath .githooks`). Principle adopted: prefer generated
   docs (docstrings, tests pinning invariants) over prose.
+- Session workflow: ritual at top of this file; stop phrase = "update the
+  worklog and stop" (then Claude offers to push); tripwire rule — sessions
+  name conflicts and require fresh confirmation before risky git/workflow
+  actions.
+- `CLAUDE.md` + `.claude/` version-controlled in a local-only side repo
+  (`.claude-local.git`, `git local` alias), auto-snapshotted by the pre-commit
+  hook; never pushed.
+- Pushed `master` + `cleanup` to GitHub (first backup of all cleanup work);
+  roadmap gained step 7 (PyPI release / outsider quickstart).
+- Found a stash from Oct 2022 (master.py / fix_frame_times.py / pid.py);
+  left untouched — likely superseded, diff before ever dropping.
 
 **Why**
 - Repo had three coexisting pipeline generations (flat legacy modules, half-built
