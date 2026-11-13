@@ -4,6 +4,23 @@ One entry per work session, **newest first**. The NOW block is the single
 source of truth for what's in flight — update it before stopping work.
 (Claude sessions: maintenance rules are in CLAUDE.md.)
 
+## Session ritual (context-window management)
+
+**Starting:** open a session *in this folder* → say what you want to work on
+(e.g. "pick up roadmap step 1") — Claude reads CLAUDE.md + this file and
+orients itself. One session = one task.
+
+**Ending (or stepping away):** say **"update the worklog and stop."**
+That's the whole ritual.
+
+**Start a FRESH session when:** switching to a different task; the current
+session gets slow, repeats itself, or forgets earlier decisions; or a long
+debugging dig ended in a small finding (have it write the finding down first).
+Fresh sessions are cheap — this file is the handoff.
+
+**Working in parallel:** second session goes in its own worktree
+(`git worktree add ../rye2p-<topic> -b <branch>`) and claims a line in NOW.
+
 ## NOW
 
 - **Active work:** `cleanup` branch — documentation/scaffolding phase complete.
