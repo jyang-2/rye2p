@@ -1,3 +1,32 @@
+# ThorSync .h5 file contents (ground-truthed 2026-11-12 against
+# odor_space_collab/raw_data/2023-04-11/2/SyncData003/Episode001.h5,
+# 51,519,000 samples @ 30 kHz = 1717.3 s):
+#
+#AI
+#	<HDF5 dataset "PiezoMonitor": shape (51519000, 1), type "<f8">
+#	<HDF5 dataset "Pockels1Monitor": shape (51519000, 1), type "<f8">
+#	<HDF5 dataset "lightpathshutter": shape (51519000, 1), type "<f8">
+#	<HDF5 dataset "olfDispPin": shape (51519000, 1), type "<f8">
+#	<HDF5 dataset "pid": shape (51519000, 1), type "<f8">
+#	<HDF5 dataset "scopePin": shape (51519000, 1), type "<f8">
+#CI
+#	<HDF5 dataset "FrameCounter": shape (51519000, 1), type "<u4">
+#DI
+#	<HDF5 dataset "FrameIn": shape (51519000, 1), type "<u4">
+#	<HDF5 dataset "FrameOut": shape (51519000, 1), type "<u4">
+#Freq
+#	<HDF5 dataset "FitHz": shape (3000, 1), type "<f8">
+#	<HDF5 dataset "Hz": shape (3000, 1), type "<f8">
+#Global
+#	<HDF5 dataset "GCtr": shape (51519000, 1), type "<u8">
+#
+# Notes from the ground-truth check (see docs/timestamps.md "Line inventory"):
+# - All six AI lines are analog float64; the TTLs (scopePin, olfDispPin,
+#   lightpathshutter) swing ~0-5 V, so the legacy 2.5 V edge thresholds work here.
+# - FrameIn was constant 0; FrameOut toggles 0<->2 (not 0/1).
+# - Freq/FitHz and Freq/Hz were all-zero (unused ThorSync feature).
+# - Global/GCtr is the 20 MHz board timebase latched per sample, not a frame counter.
+
 piezo_monitor: PiezoMonitor
 pockels_monitor: Pockels1Monitor
 lightpath_shutter: lightpathshutter

@@ -23,18 +23,75 @@ Fresh sessions are cheap — this file is the handoff.
 
 ## NOW
 
-- **Active work:** `cleanup` branch — documentation/scaffolding phase complete.
-- **Next action (before any code changes):** ThorSync ground-truth check —
-  open a real ThorSync `.h5`, enumerate every line, verify the docs' account of
-  each line's physical meaning and pipeline role against the actual data, and
-  patch `docs/timestamps.md` with anything missing or wrong.
-- **Then:** roadmap step 1 — promote `preprocess_thorimage()` from
+- **Active work:** `cleanup` branch — ground-truth check done; ready for
+  roadmap step 1.
+- **Next action:** roadmap step 1 — promote `preprocess_thorimage()` from
   `notebooks/pipeline_demo.ipynb` into `rye2p/pipeline/preprocess.py`
   (see [docs/roadmap.md](docs/roadmap.md)). Architecture changes and bug fixes
-  proceed together in roadmap order (steps 1–3), not fixes-first.
+  proceed together in roadmap order (steps 1–3), not fixes-first. Step 2 now
+  includes the newly found issue #22 (legacy drops first frame/volume —
+  stack_times one volume late in all legacy-produced files).
+- **Heads-up for downstream work:** legacy `timestamps.npy` files (e.g. all
+  odor_space_collab-era) have `stack_times[i]` = first plane of volume i+1
+  (~337 ms late) and `frame_times` one frame late — see known issues #22 and
+  docs/timestamps.md. Also: ThorSync↔ThorImage pairings need fingerprint
+  verification (2023-04-11/2: megamat1↔SyncData001, NOT SyncData003).
 - **Parallel sessions:** before starting a second simultaneous session, claim a
   line here (branch + worktree path), e.g.
   `- session B: branch fix-timing, worktree ../rye2p-timing`.
+
+## 2026-11-12 — ThorSync ground-truth check (upstairs rig)
+
+**Done**
+- Enumerated every dataset in a real upstairs `Episode001.h5`
+  (odor_space_collab 2023-04-11 fly 2, read-only): 9 canonical lines + `Freq/`
+  (zeros, unused) + `Global/GCtr` (20 MHz board timebase, not a frame
+  counter). Inventory tables added to `docs/timestamps.md` ("Line inventory")
+  and as comments in `data/microscopes/upstairs-2p/thorsync_lines.yaml`.
+- Verified: upstairs `scopePin` is analog AI 0–4.9 V (2.5 V thresholds valid);
+  `FrameIn` constant 0; `FrameOut` toggles 0↔2; `PiezoMonitor` near-constant
+  (useless for z-QC); `edges(size=...)` is jump-magnitude, not level-threshold
+  (docs wording fixed); sample rate exactly 30000 from XML; GCtr vs sample
+  clock disagree ~1e-4 (noted, ignored).
+- **Reproduced the saved `timestamps.npy`/`timestamps0.npy` bit-exactly**
+  (max diff 0 on all 6 keys) from SyncData001 + current legacy code — after
+  discovering the real pairing is megamat1↔SyncData001 (fingerprints:
+  counter max 90,752 vs 90,740 movie frames; realized 59.29 Hz vs xml 59.273;
+  SyncData003 belongs to megamat1_calyx_001 at 60.17 Hz).
+- **New known issue #22 (the big one):** legacy `extract_timestamp_data` drops
+  the first frame and first volume (`get_start_times` default
+  `zero_based_counter=False` on a cropped counter): `frame_times[j]` =
+  physical frame j+1, `stack_times[i]` = first plane of volume i+1 (~337 ms
+  late). Known issue #2 re-attributed (notebooks = true first-plane; legacy =
+  next-volume first plane; fix_timestamps0 = last step). Issue #23: notebook
+  edge times are 1 kHz-quantized + undocumented `scope_fct[1:]` hack.
+- Saved megamat1 file demonstrates issue #4 live: 90,749 frame times saved
+  (expected 90,740, not divisible by 20; `plane_times` refuses it).
+- Docs patched: timestamps.md (inventory, legacy-drop danger box, convention
+  box rewrite, edges semantics, notebook 1 kHz, validation + pairing
+  fingerprints), known-issues (#2/#4/#20 updated, #22/#23 added), roadmap
+  (step 2 scope + done-list), per-plane tutorial warning box.
+- Env recorded in CLAUDE.md: data inspection runs in conda `twoppp311`;
+  `~/git/utils2p` checkout is NOT the installed copy.
+
+**Why**
+- NOW action queued this before any code changes; the user supplied the
+  acquisition. The per-plane downstream goal is directly affected: legacy
+  stack_times error (one volume) is ~20× the per-plane error plane_times
+  corrects.
+
+**Decisions**
+- No code changes yet (roadmap order holds); fixes for #22/#23 added to
+  roadmap step 2 scope.
+- Inventory lives in timestamps.md + yaml comments (prose-with-evidence, not
+  generated — revisit when extraction code is unified in step 2).
+
+**Open questions**
+- Were other flies' timestamps extracted from mispaired SyncData episodes?
+  Worth a fingerprint sweep over processed_data when pipeline code is unified
+  (cheap: counter max + frame-rate check per movie).
+- Should legacy-produced timestamps.npy files be mass re-extracted after the
+  step-2 fix, or shimmed on load (one-volume shift)?
 
 ## 2026-11-11/12 — Cleanup kickoff: audit, docs site, per-plane timestamps
 

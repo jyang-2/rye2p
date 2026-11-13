@@ -42,10 +42,16 @@ deleted (it stays recoverable in git history).
 ### 2. Fix timing correctness  *(the science-critical step)*
 - All `steps_per_frame` derivations read `FunctionalImagingSettings` (fixes the
   single-plane double decimation).
+- Fix the legacy dropped-first-frame/volume shift (known issue #22:
+  `zero_based_counter=False` on cropped counters) — the largest systematic
+  error found (one volume period, ~337 ms).
 - Standardize **first-plane** stack-time convention everywhere; fix
   `fix_timestamps0`'s last-step indexing.
-- Normalize lines to [0,1] before edge detection (fixes digital scope pin).
-- Count validation **raises** by default (`strict=True`).
+- Normalize lines to [0,1] before edge detection (fixes digital scope pin);
+  compute edges at full rate, not on 1 kHz-decimated lines (known issue #23).
+- Count validation **raises** by default (`strict=True`); validate the
+  ThorSync↔ThorImage pairing by fingerprint (counter max, realized frame
+  rate) — see [Validation](timestamps.md#validation).
 - Add regression tests using small synthetic counter/TTL traces + the
   `data/haoru` example.
 
@@ -93,3 +99,9 @@ deleted (it stays recoverable in git history).
   `plane_times_from_settings` + 7 passing tests (`tests/test_plane_times.py`).
 - ✅ This documentation site (mkdocs-material + mkdocstrings), README landing
   page, and a local (untracked) AI-assistant orientation file.
+- ✅ ThorSync ground-truth check against a real upstairs acquisition
+  (`odor_space_collab` 2023-04-11 fly 2): line inventory added to
+  [timestamps.md](timestamps.md) and both `thorsync_lines.yaml` files; legacy
+  extraction reproduced bit-exactly; found known issues #22 (legacy drops
+  first frame/volume → stack times one volume late) and #23 (notebook edge
+  times 1 ms-quantized); conventions re-attributed in issue #2.

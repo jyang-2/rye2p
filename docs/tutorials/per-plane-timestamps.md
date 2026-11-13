@@ -39,7 +39,8 @@ Guarantees:
 - `pt[t, z]` = acquisition time (seconds, ThorSync clock) of plane `z` in
   volume `t` of `Image_001_001.tif` — flyback planes are dropped, matching the
   saved movie exactly.
-- `pt[:, 0] == ts["stack_times"]` (first-plane convention).
+- `pt[:, 0] == ts["stack_times"]` (first-plane convention — holds for
+  notebook-produced files; see the warning below for legacy/repaired files).
 - Raises `ValueError` if `frame_times` isn't a whole number of volumes — that
   means the timestamps weren't repaired; see
   [Timestamps explained](../timestamps.md#what-fix_frame_timespy-repairs).
@@ -82,11 +83,20 @@ assert (dz > 0).all()                       # planes strictly ordered within a v
 ```
 
 !!! warning
-    If `pt[:, 0]` does **not** equal `stack_times`, the file was probably
-    repaired by `fix_timestamps0`, which (currently) stamps volumes with the
-    *last* step instead of the first — see
-    [known issue #2](../known-issues.md). Trust `frame_times` + `plane_times`
-    over `stack_times` in that case.
+    If `pt[:, 0]` does **not** equal `stack_times`, the file came from one of
+    the two non-first-plane producers
+    ([known issues #2 and #22](../known-issues.md)):
+
+    - **Legacy `process_thorsync.py`** (most `odor_space_collab`-era files):
+      `stack_times[i]` is the first plane of volume **i+1** (~one volume
+      period late), and `frame_times` itself is one frame (~17 ms) late —
+      these files usually also fail the divisibility check in `plane_times`
+      and need repair first.
+    - **`fix_timestamps0`-repaired files**: volumes are stamped with the
+      *last* step instead of the first.
+
+    In either case trust `frame_times` + `plane_times` over `stack_times`
+    (worst case ~one frame of residual error instead of ~one volume).
 
 ## Worked example data
 

@@ -12,11 +12,13 @@ checkpoint commit (`67ee170`). Roadmap steps that fix each are noted.
    `n_averaging`. `FunctionalImagingSettings.from_xml` has the correct logic;
    the notebook path reads it and is trustworthy. *Fix: roadmap step 2.*
 
-2. **Stack-time convention conflict** — `process_thorsync.py:217` and the
-   notebooks stamp each volume with its **first** plane's time;
-   `fix_frame_times.py:211` (`fix_timestamps0`) uses the **last** step —
-   a systematic `(steps_per_frame−1)/raw_frame_rate` offset depending on which
-   code produced/repaired the file. *Fix: standardize first-plane, roadmap step 2.*
+2. **Stack-time convention conflict** (re-attributed by the 2026-11-12
+   ground-truth check, see #22) — the notebooks stamp each volume with its
+   true **first** plane's time; `process_thorsync.py:217` produces the first
+   plane of the **next** volume (one volume period late — a consequence of
+   #22, not of the grouping); `fix_frame_times.py:211` (`fix_timestamps0`)
+   uses the **last** step. Three different stamps depending on which code
+   produced/repaired the file. *Fix: standardize first-plane, roadmap step 2.*
 
 3. **Analog-voltage assumptions on a digital rig** — `scope_pin > 1` masks and
    hard-coded 2.5 V thresholds (`process_thorsync.py:204, 219, 225, 233`) are
@@ -27,7 +29,9 @@ checkpoint commit (`67ee170`). Roadmap steps that fix each are noted.
 4. **Validation only prints** — count mismatches vs `Experiment.xml` are
    printed, not raised (`process_thorsync.py:297-310`; the `raise`s in
    `fix_timestamps0` are commented out). A wrong `timestamps.npy` still gets
-   saved. *Fix: raise by default, roadmap step 2.*
+   saved — verified in the wild: `odor_space_collab` 2023-04-11/2/megamat1 was
+   saved with 90,749 frame times (expected 90,740; not divisible by
+   `steps_per_frame`). *Fix: raise by default, roadmap step 2.*
 
 5. **Fuzzy line matching can double-assign** — the legacy matcher
    (`process_thorsync.py:109`) does per-column argmax with no 1:1 constraint;
@@ -76,8 +80,13 @@ checkpoint commit (`67ee170`). Roadmap steps that fix each are noted.
 19. Two tiff backends in play: writes via `utils2p.save_img`, reads/memmaps via
     `tifffile` directly.
 20. `utils2p` is pinned at `~=0.1.0` and every ThorImage/ThorSync read goes
-    through it (locally an editable checkout at `/home/remy/git/utils2p`) —
-    a single point of failure worth vendoring or wrapping narrowly.
+    through it — a single point of failure worth vendoring or wrapping
+    narrowly. Local install reality (checked 2026-11-12): the env that
+    actually runs data code (`conda env twoppp311`) has a plain site-packages
+    *copy*, not an editable install; the git checkout at
+    `/home/remy/git/utils2p` differs from it only in functions the pipeline
+    doesn't use (`beh_idx_to_2p_idx`, `event_based_frame_indices`); the one
+    editable install (`twoppp37`) has a broken egg-link.
 
 ## Duplication (drift risk)
 
@@ -87,3 +96,32 @@ checkpoint commit (`67ee170`). Roadmap steps that fix each are noted.
     modules; `match_pulse_times`/`match_scope_times` are byte-identical twins;
     `steps_per_frame` logic is re-derived inline in ≥4 places instead of reading
     `FunctionalImagingSettings`. *Fix: roadmap steps 1–3.*
+
+## Found by the ThorSync ground-truth check (2026-11-12)
+
+Verified against `odor_space_collab/raw_data/2023-04-11/2` (upstairs rig) and
+its saved outputs; the legacy extraction was reproduced **bit-exactly** from
+`SyncData001`, so these are confirmed behaviors, not hypotheses. Details in
+[Timestamps explained](timestamps.md).
+
+22. **Legacy extraction drops the first frame and first volume** —
+    `extract_timestamp_data` calls `get_start_times` with the default
+    `zero_based_counter=False` on the **cropped** counter
+    (`process_thorsync.py:207, 217`); the cropped line already sits at
+    frame/volume 0, which therefore has no rising edge and is dropped. Every
+    `frame_times[j]` is physical frame j+1 (~17 ms late) and every
+    `stack_times[i]` is the first plane of volume i+1 (**one volume period
+    late**, ~337 ms in the verified acquisition — larger than the per-plane
+    error `plane_times` was built to remove). Affects every legacy-produced
+    `timestamps.npy`. *Fix: `zero_based_counter=True` (or extract before
+    cropping), roadmap step 2; downstream files need re-extraction or a
+    one-volume shift on load.*
+
+23. **Notebook edge times are 1 ms-quantized and drop a falling edge** —
+    `notebooks/thorsync_lines_demo.ipynb` cell 17 reloads the 1 kHz
+    `sync_lines.npz`, so all `scope/olf ict/fct` computed after it carry 1 ms
+    quantization (the doc's "all timestamps on the 30 kHz clock" holds only
+    for the legacy path and for counter-derived frame times); cell 29 also
+    discards the first scope falling edge (`scope_fct = ...[1:]`) as an
+    unexplained rig-specific hack. *Fix: compute edges at full rate in
+    `thorsync/lines.py`, roadmap steps 1–2.*
