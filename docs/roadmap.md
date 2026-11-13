@@ -75,6 +75,14 @@ deleted (it stays recoverable in git history).
   against the `data/haoru` example.
 - API docstrings pass over the surviving modules.
 
+### 7. Release for other people  *(after 1–5)*
+- Quickstart for outsiders: install → tiny bundled example → first
+  `timestamps.npy` in ten minutes, without access to the lab's data roots.
+- `pip install rye2p` from PyPI (pyproject is ready; blockers are the fixes
+  above plus the `utils2p` dependency decision from step 4).
+- Versioning + changelog; publish the docs site (e.g. GitHub Pages via the
+  existing CI).
+
 ## Done so far (cleanup branch)
 
 - ✅ Checkpoint commit of all WIP (`67ee170`); `master` preserved.

@@ -24,9 +24,14 @@ Fresh sessions are cheap — this file is the handoff.
 ## NOW
 
 - **Active work:** `cleanup` branch — documentation/scaffolding phase complete.
-- **Next action:** roadmap step 1 — promote `preprocess_thorimage()` from
+- **Next action (before any code changes):** ThorSync ground-truth check —
+  open a real ThorSync `.h5`, enumerate every line, verify the docs' account of
+  each line's physical meaning and pipeline role against the actual data, and
+  patch `docs/timestamps.md` with anything missing or wrong.
+- **Then:** roadmap step 1 — promote `preprocess_thorimage()` from
   `notebooks/pipeline_demo.ipynb` into `rye2p/pipeline/preprocess.py`
-  (see [docs/roadmap.md](docs/roadmap.md)).
+  (see [docs/roadmap.md](docs/roadmap.md)). Architecture changes and bug fixes
+  proceed together in roadmap order (steps 1–3), not fixes-first.
 - **Parallel sessions:** before starting a second simultaneous session, claim a
   line here (branch + worktree path), e.g.
   `- session B: branch fix-timing, worktree ../rye2p-timing`.
