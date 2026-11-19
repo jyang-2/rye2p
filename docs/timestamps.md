@@ -186,13 +186,14 @@ in all three recordings — `bytes / (pixelX × pixelY × 2)`):
   window is saved.** `megamat1_calyx_001`: 92,127 counted → 92,125 saved =
   exactly the frames that started before the trigger fell.
 
-**Unresolved**: whether a *completed* sweep whose final frames fall after the
-trigger drops would be kept. The verified data cannot distinguish this from
-the strict everything-in-window rule — the scanner overrun (~3 frames) is
-shorter than a volume, and the last complete volume ended well inside the
-window, so both rules predict the same file. Until an acquisition where the
-trigger falls within the last few frames of a sweep says otherwise, don't
-assume either rule.
+**Resolved for averaging blocks (2026-11-19)**: a block that *starts* inside
+the window and *completes* after the trigger falls **is kept**. `megamat1_calyx`
+(4× averaging): only 92,125 raw frames started inside the scope window, but the
+movie holds 23,032 × 4 = 92,128 — the final block (f92124–f92127) finished
+~3 frames after the trigger fell and was saved anyway. So completion is the
+criterion, not full in-window containment. Still unverified for fast-z
+z-sweeps (no acquisition where the trigger fell inside a sweep's last frames),
+but the same rule is likely.
 
 The robust recipe (what the notebook path implements): crop frame times to the
 scope-pin window **with a few frame-periods of padding at the end**, then keep

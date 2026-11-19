@@ -13,7 +13,13 @@ checkpoint commit (`67ee170`). Roadmap steps that fix each are noted.
    the notebook path reads it and is trustworthy. Confirmed in the wild
    (2026-11-12): single-plane `timestamps0.npy` files on 2023-04-11/2 carry
    the `steps_per_frame=20` garbage (`stack_times` = 4,606 = frames/20); the
-   final files were later hand-rescued (see #24). *Fix: roadmap step 2.*
+   final files were later hand-rescued (see #24). A second facet (2026-11-19):
+   `utils2p.Metadata.get_n_averaging()` returns `LSM/averageNum` without
+   checking `averageMode`, so the `:307` decimation fires even with averaging
+   **off** — `megamat1_calyx_001` (averageMode=0, averageNum=4) would get
+   `stack_times` = 4,606[::4] = 1,152 vs the correct 92,125; re-derivation
+   confirms the current end-to-end code produces 1,152 for *both* calyx
+   recordings. *Fix: roadmap step 2.*
 
 2. **Stack-time convention conflict** (re-attributed by the 2026-11-12
    ground-truth check, see #22) — the notebooks stamp each volume with its
