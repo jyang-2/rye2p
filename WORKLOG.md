@@ -40,6 +40,12 @@ Fresh sessions are cheap — this file is the handoff.
   `stimulus_info_<date>.yaml` in the date folder (human log, never
   machine-read; 2023-04-11/2: megamat1↔SyncData001 confirmed by log AND
   data fingerprints).
+- **Side project:** ThorSync Timestamp GUI lives in `../rye2p-gui` (own git
+  repo): FastAPI backend + standalone Preact page, run with
+  `twoppp311 python -m uvicorn thorsync_gui.server:app --port 8765 --app-dir
+  /home/remy/PycharmProjects/rye2p-gui`. Verified end-to-end on
+  megamat1/SyncData001 (first-plane stack times, 4537/4537). Mirrors of the
+  code also live on the claude.ai design canvas.
 - **Parallel sessions:** before starting a second simultaneous session, claim a
   line here (branch + worktree path), e.g.
   `- session B: branch fix-timing, worktree ../rye2p-timing`.
