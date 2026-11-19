@@ -43,7 +43,7 @@ listing is the dump recorded in
 
 | dataset | group | dtype | observed (verified acquisition) |
 |---|---|---|---|
-| `PiezoMonitor` | `AI` | f8 | analog readout of the piezo z position. On the fast-z episode (`SyncData001`): a clean per-volume staircase — 16 ascending steps of ~34 mV (one per imaging plane) + a 4-frame flyback descent, per-plane values repeatable to ~1–2 mV → each plane's piezo level is distinguishable, usable as an independent check of plane identity / volume phase. Near-constant on single-plane recordings (as in `SyncData003`) |
+| `PiezoMonitor` | `AI` | f8 | analog readout of the piezo z position. On the fast-z episode (`SyncData001`), verified with counter-aligned volume phase: planes 0–15 ascend ~34 mV/step from the bottom; the 4 flyback frames are **one further step up to the max, then a 3-frame descent** back to the bottom. Per-step values repeatable to ~1–2 mV → each plane's piezo level is distinguishable, usable as an independent check of plane identity / volume phase (`FrameOut` cannot do this — it fires identically for every frame, flyback included). Near-constant on single-plane recordings (as in `SyncData003`) |
 | `Pockels1Monitor` | `AI` | f8 | 0.03–0.38 V, analog |
 | `lightpathshutter` | `AI` | f8 | 0–4.0 V TTL; 2 pulses bracketing the acquisition |
 | `olfDispPin` | `AI` | f8 | 0–4.9 V TTL; one pulse per stimulus (51 pulses = 51 stimuli in `stim_list.json`) |
