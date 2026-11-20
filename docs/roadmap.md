@@ -129,3 +129,23 @@ deleted (it stays recoverable in git history).
   extraction reproduced bit-exactly; found known issues #22 (legacy drops
   first frame/volume → stack times one volume late) and #23 (notebook edge
   times 1 ms-quantized); conventions re-attributed in issue #2.
+- ✅ **Step 2 complete — timing correctness**: new `thorsync/lines.py`
+  (normalize-first, full-rate edge detection — closes #3/#23) and the
+  unified extraction `thorsync/timestamps.py::extract_timestamps` /
+  `extract_timestamps_from_files` (raw-counter increment times keep frame 0 —
+  closes #22; `steps_per_frame` from `FunctionalImagingSettings` everywhere —
+  closes #1 incl. the averageMode facet; first-plane `stack_times` — closes
+  #2, `fix_timestamps0`'s last-step indexing fixed too).
+  `validate_frame_counts` raises by default and encodes the ground-truthed
+  per-mode save rules (fast-z floors partial volumes; single-plane saves a
+  started averaging block — ceil) — closes #4; ThorSync↔ThorImage pairing
+  fingerprint check (`validate_pairing`: counter max + realized frame rate).
+  Legacy `process_thorsync.extract_timestamp_data` /
+  `convert_thorsync_to_timestamps_npy` now delegate to the unified
+  extraction (no more single-plane re-decimation; olf filtering applied
+  uniformly); line matching goes through the per-rig YAML maps (#5 on the
+  extraction path). `thorsync_lines_demo.ipynb` computes frame/edge times at
+  full rate via the library (1 kHz copy kept for plotting only). Regression
+  tests on synthetic counter/TTL traces + the `data/haoru` example
+  (39 → 73 tests). ⚠️ Files written before the fix still carry the old bugs
+  (#22/#24) — re-extraction is a follow-up.

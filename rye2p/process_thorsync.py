@@ -190,60 +190,35 @@ def get_thorsync_lines(h5_file):
     return sync_data
 
 
-def extract_timestamp_data(h5_file, meta_file):
-    sync_data = get_thorsync_lines(h5_file)
-    meta = utils2p.Metadata(meta_file)
+def extract_timestamp_data(h5_file, meta_file, microscope=None, strict=True):
+    """Extract timestamp arrays from a ThorSync h5 + paired Experiment.xml.
 
-    # check if single plane
-    fast_z = bool(int(meta.get_metadata_value("Streaming", 'zFastEnable')))
+    Rewritten in roadmap step 2 to delegate to the unified, ground-truthed
+    extraction (``rye2p.thorsync.timestamps.extract_timestamps_from_files``).
+    The old in-place implementation dropped frame 0 and volume 0 (known issue
+    #22 — every ``stack_times[i]`` was one volume period late), derived
+    ``steps_per_frame`` without the ``fast_z``/``averageMode`` guards (#1),
+    and assumed analog voltages on the scope pin (#3).
 
-    # timepoints for every individual frame
-    # --------------------------------------
+    Args:
+        h5_file: path to ``Episode001.h5``.
+        meta_file: path to the paired ThorImage ``Experiment.xml``.
+        microscope: rig name for the line map (e.g. ``'upstairs-2p'``); None
+            falls back to fuzzy line matching with a warning.
+        strict: raise on pairing-fingerprint or count mismatches (default)
+            instead of warning.
 
-    processed_frame_counter = utils2p.synchronization.process_frame_counter(sync_data['frame_counter'],
-                                                                            steps_per_frame=1)
-    mask = np.logical_and(sync_data['scope_pin'] > 1, processed_frame_counter >= 0)
-    lines_to_crop = [sync_data['sync_times'], processed_frame_counter]
-    cropped_sync_times, cropped_frame_counter = utils2p.synchronization.crop_lines(mask, lines_to_crop)
-    frame_times = utils2p.synchronization.get_start_times(cropped_frame_counter, cropped_sync_times)
+    Returns:
+        dict with ``frame_times`` (whole timepoints only, frame 0 included),
+        ``stack_times`` (first-plane convention), ``scope_ict``/``scope_fct``,
+        ``olf_ict``/``olf_fct`` (all olf pulses, incl. outside scope pulses),
+        plus the per-pulse ``split_*`` / ``n_*_per_pulse`` keys.
+    """
+    from rye2p.thorsync import timestamps as ts
 
-    # timepoints for each volumetric scan
-    # ------------------------------------------
-    steps_per_frame = meta.get_n_z() + meta.get_n_flyback_frames()
-    processed_stack_counter = utils2p.synchronization.process_frame_counter(sync_data['frame_counter'],
-                                                                            steps_per_frame=steps_per_frame)
-    mask = np.logical_and(sync_data['scope_pin'] > 1, processed_stack_counter >= 0)
-    lines_to_crop = [sync_data['sync_times'], processed_stack_counter]
-    cropped_sync_times, cropped_stack_counter = utils2p.synchronization.crop_lines(mask, lines_to_crop)
-    stack_times = utils2p.synchronization.get_start_times(cropped_stack_counter, cropped_sync_times)
-
-    voltage_threshold = 2.5
-    sync_times = sync_data['sync_times']
-
-    # scope ict/fct
-    # ------------
-    scope_pin = sync_data['scope_pin']
-    scope_ici, = utils2p.synchronization.edges(scope_pin, size=voltage_threshold)
-    scope_fci, = utils2p.synchronization.edges(scope_pin, size=(-np.inf, -1 * voltage_threshold))
-    scope_ict = sync_times[scope_ici]
-    scope_fct = sync_times[scope_fci]
-
-    # olf ict/fct
-    # ------------
-    olf_disp_pin = sync_data['olf_disp_pin']
-    olf_ici, = utils2p.synchronization.edges(olf_disp_pin, size=voltage_threshold)
-    olf_fci, = utils2p.synchronization.edges(olf_disp_pin, size=(-np.inf, -1 * voltage_threshold))
-    olf_ict = sync_times[olf_ici]
-    olf_fct = sync_times[olf_fci]
-
-    timestamp_data = dict(frame_times=frame_times,
-                          stack_times=stack_times,
-                          scope_ict=scope_ict,
-                          scope_fct=scope_fct,
-                          olf_ict=olf_ict,
-                          olf_fct=olf_fct
-                          )
-    return timestamp_data
+    return ts.extract_timestamps_from_files(h5_file, meta_file,
+                                            microscope=microscope,
+                                            strict=strict)
 
 
 def fast_z_enabled(meta_file):
@@ -251,19 +226,37 @@ def fast_z_enabled(meta_file):
     return bool(int(meta.get_metadata_value("Streaming", 'zFastEnable')))
 
 
-def convert_thorsync_to_timestamps_npy(flacq, raw_dir, proc_dir, match_stack_times_only=True):
+def convert_thorsync_to_timestamps_npy(flacq, raw_dir, proc_dir,
+                                       match_stack_times_only=True,
+                                       microscope=None, strict=True):
     """ Extracts timing info for frame acquisitions, stimuli, and scope acquisitions.
+
+    Since roadmap step 2 this runs the unified extraction
+    (:func:`extract_timestamp_data`), which already returns whole-timepoint
+    ``frame_times`` (frame 0 included), first-plane ``stack_times`` with the
+    averaging handled via ``steps_per_frame``, and validated counts — the old
+    post-hoc repairs (``fix_timestamps0``, the single-plane
+    ``[::n_averaging]`` re-decimation) are no longer applied. The final
+    ``timestamps.npy`` only differs from ``timestamps0.npy`` by dropping olf
+    pulses that fall outside the scope pulses (``fix_olf_times`` — now for
+    single-plane recordings too).
 
     Args:
         proc_dir ():
         raw_dir ():
         flacq (dict): dict from dataset manifesto `flat_linked_thor_acquisitions.json`
-        match_stack_times_only (bool): only require the # of stack_times extracted to match the # of timepoints in
-            Experiment.xml
+        match_stack_times_only (bool): ignored since roadmap step 2 (kept for
+            signature compatibility) — the extraction always regroups per
+            scope pulse and validates both counts.
+        microscope (str): rig name for the line map (e.g. ``'upstairs-2p'``);
+            None falls back to fuzzy line matching with a warning.
+        strict (bool): raise on pairing-fingerprint or count mismatches
+            (default) instead of warning — nothing is saved on a failure.
 
     Returns:
-        timestamps (dict): contains fields 'stack_times', 'frame_times', 'scope_ici', 'scope_ict', 'olf_ici', 'olf_ict'
+        timestamps (dict): contains fields 'stack_times', 'frame_times', 'scope_ict', 'scope_fct', 'olf_ict', 'olf_fct'
         """
+    from rye2p.thorimage.settings import FunctionalImagingSettings
 
     # make initial timestamps0.npy
     h5_file, sync_meta_file, meta_file = flacq2rawfiles(flacq, raw_dir)
@@ -273,43 +266,25 @@ def convert_thorsync_to_timestamps_npy(flacq, raw_dir, proc_dir, match_stack_tim
     print(f'\nConverting ThorSync to timestamps:')
     print(f"\t- SAVE_DIR: {SAVE_DIR}")
 
-    meta = utils2p.Metadata(meta_file)
-    fast_z = bool(int(meta.get_metadata_value("Streaming", 'zFastEnable')))
+    settings = FunctionalImagingSettings.from_xml(meta_file)
 
-    timestamps0 = extract_timestamp_data(h5_file, meta_file)
+    timestamps0 = extract_timestamp_data(h5_file, meta_file,
+                                         microscope=microscope, strict=strict)
     np.save(SAVE_DIR.joinpath('timestamps0.npy'), timestamps0)
 
-    if fast_z:
-        if match_stack_times_only:
-            # remove olf times outside of scope trigger pulses
-            timestamps = fix_frame_times.fix_olf_times(timestamps0)
-        else:
-            timestamps = fix_frame_times.fix_timestamps0(SAVE_DIR.joinpath('timestamps0.npy'))
+    # remove olf times outside of scope trigger pulses
+    timestamps = fix_frame_times.fix_olf_times(timestamps0)
+
+    expected_frame_times = (settings.n_timepoints * settings.steps_per_frame
+                            if settings.fast_z else None)
+    print(f"\t- stack_times: {timestamps['stack_times'].size} "
+          f"(Experiment.xml n_timepoints: {settings.n_timepoints})")
+    if expected_frame_times is not None:
+        print(f"\t- frame_times: {timestamps['frame_times'].size} "
+              f"(expected {expected_frame_times})")
     else:
-        timestamps = timestamps0
-        # if movie is single plane, it's important to match frame times and stack times
-        # timestamps = fix_frame_times.fix_timestamps0(SAVE_DIR.joinpath('timestamps0.npy'))
-
-    # correct timestamps file
-    # -----------------------
-    # if volumetric
-    if fast_z:
-        steps_per_frame = meta.get_n_flyback_frames() + meta.get_n_z()
-
-        stack_times_correct = timestamps['stack_times'].size == meta.get_n_time_points()
-        frame_times_correct = timestamps['frame_times'].size == steps_per_frame * meta.get_n_time_points()
-
-        print(f"\t- correct # of stack_times: {stack_times_correct}")
-        print(f"\t- correct # of frame_times: {frame_times_correct}")
-
-    else:
-        n_frames_averaged = meta.get_n_averaging()
-        print(f'\tsingle plane movie, {n_frames_averaged} frame average')
-
-        timestamps['stack_times'] = timestamps['stack_times'][::n_frames_averaged]
-
-        stack_times_correct = timestamps['stack_times'].size == meta.get_n_time_points()
-        print(f"\t- correct # of stack_times: {stack_times_correct}")
+        print(f"\t- frame_times: {timestamps['frame_times'].size} raw frames "
+              f"(single plane, n_averaging={settings.n_averaging})")
 
     save_file = SAVE_DIR.joinpath('timestamps.npy')
     np.save(save_file, timestamps)
@@ -361,7 +336,8 @@ def copy_experiment_xml(flacq, raw_dir, proc_dir):
     return meta_file, dest_file
 
 
-def main(flacq, raw_dir, proc_dir, match_stack_times_only=True):
+def main(flacq, raw_dir, proc_dir, match_stack_times_only=True,
+         microscope=None, strict=True):
     print(f'\nProcessing ThorSync files:')
     print(f'---------------------------')
     pp.pprint(flacq)
@@ -371,6 +347,8 @@ def main(flacq, raw_dir, proc_dir, match_stack_times_only=True):
     copy_experiment_xml(flacq, raw_dir, proc_dir)
 
     timestamps_file, timestamps = convert_thorsync_to_timestamps_npy(flacq, raw_dir, proc_dir,
-                                                                     match_stack_times_only=match_stack_times_only)
+                                                                     match_stack_times_only=match_stack_times_only,
+                                                                     microscope=microscope,
+                                                                     strict=strict)
     print('Done processing ThorSync files.')
     return timestamps_file, timestamps

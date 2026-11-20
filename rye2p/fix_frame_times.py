@@ -180,27 +180,43 @@ def fix_olf_times(timestamps0):
 
 
 def fix_timestamps0(timestamps0_file):
-    """
+    """Regroup a ``timestamps0.npy`` by scope pulse (whole timepoints only).
+
+    ⚠️ Only needed for files written by the pre-step-2 legacy extraction —
+    the unified extraction (``thorsync.timestamps.extract_timestamps``)
+    already returns regrouped, first-plane output. Legacy ``timestamps0``
+    inputs also dropped frame 0 / volume 0 at extraction time (known issue
+    #22), which no regrouping can repair — prefer re-extracting from the h5.
+
+    Stack times use the **first-plane** convention (fixed in roadmap step 2:
+    this function previously stamped the *last* step of each timepoint, known
+    issue #2), ``steps_per_frame`` comes from ``FunctionalImagingSettings``
+    (fast-z and averageMode guards, known issue #1), and count mismatches warn
+    instead of printing.
 
     Args:
-        timestamps0_file (Union[str, Path]):
-        timestamps_file (str, Path):
-        overwrite_ok ():
+        timestamps0_file (Union[str, Path]): path to ``timestamps0.npy``; the
+            paired ``Experiment.xml`` must sit next to it.
 
     Returns:
-
+        dict: the regrouped timestamps with the extra ``split_*`` /
+        ``n_*_per_pulse`` keys.
     """
+    import warnings
+
+    from rye2p.thorimage.settings import FunctionalImagingSettings
+
     if isinstance(timestamps0_file, str):
         timestamps0_file = Path(timestamps0_file)
 
     timestamps0 = np.load(timestamps0_file, allow_pickle=True).item()
 
     meta_file = timestamps0_file.with_name("Experiment.xml")
-    meta = utils2p.Metadata(meta_file)
+    settings = FunctionalImagingSettings.from_xml(meta_file)
 
-    n_frames = int(meta.get_value('Streaming', 'frames'))
-    n_timepoints = meta.get_n_time_points()
-    steps_per_frame = meta.get_n_z() + meta.get_n_flyback_frames()
+    n_frames = settings.n_frames
+    n_timepoints = settings.n_timepoints
+    steps_per_frame = settings.steps_per_frame
 
     timestamps0 = fix_timestamp_pulse_times(timestamps0)
 
@@ -208,22 +224,29 @@ def fix_timestamps0(timestamps0_file):
                                               timestamps0['scope_ict'],
                                               timestamps0['scope_fct'])
 
-    stack_times_per_pulse = [item[steps_per_frame - 1::steps_per_frame] for item in
-                             split_frame_times]
-    n_stack_times_per_pulse = [item.size for item in stack_times_per_pulse]
-    fixed_stack_times = np.concatenate(stack_times_per_pulse)
-
-    frame_times_per_pulse = [item[:n * steps_per_frame] for item, n in
-                             zip(split_frame_times, n_stack_times_per_pulse)]
+    if settings.fast_z:
+        # a partial volume at the trigger fall is not in the saved movie
+        frame_times_per_pulse = [
+                item[:(item.size // steps_per_frame) * steps_per_frame]
+                for item in split_frame_times]
+    else:
+        # ThorImage saves an averaging block that starts in-window even when
+        # it completes after the trigger fall - keep all in-window frames
+        frame_times_per_pulse = split_frame_times
     n_frame_times_per_pulse = [item.size for item in frame_times_per_pulse]
     fixed_frame_times = np.concatenate(frame_times_per_pulse)
 
+    stack_times_per_pulse = [item[::steps_per_frame]
+                             for item in frame_times_per_pulse]
+    n_stack_times_per_pulse = [item.size for item in stack_times_per_pulse]
+    fixed_stack_times = np.concatenate(stack_times_per_pulse)
+
     if fixed_stack_times.size != n_timepoints:
-        # raise Exception("Could not extract the correct # of stack_times.")
-        print("Could not extract the correct # of stack_times.")
-    if fixed_frame_times.size != n_frames:
-        # raise Exception("Could not extract the correct # of frame_times.")
-        print("Could not extract the correct # of frame_times.")
+        warnings.warn(f"could not extract the correct # of stack_times "
+                      f"({fixed_stack_times.size} vs {n_timepoints} expected)")
+    if settings.fast_z and fixed_frame_times.size != n_frames:
+        warnings.warn(f"could not extract the correct # of frame_times "
+                      f"({fixed_frame_times.size} vs {n_frames} expected)")
 
     # timestamps_file = timestamps0_file.with_name('timestamps.npy')
 

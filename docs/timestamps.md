@@ -73,49 +73,49 @@ there is no `Freq/` group. Full dump in
 
 ## How frame times are computed
 
-In `rye2p/process_thorsync.py::extract_timestamp_data` (legacy):
+Since roadmap step 2, all paths run the **unified extraction**
+(`rye2p.thorsync.timestamps.extract_timestamps`, ported from the ThorSync GUI
+after end-to-end verification on all three 2023-04-11/2 recording types):
 
-1. `sync_times = np.arange(n_samples) / freq` — seconds since ThorSync start.
+1. Sample `k` of a line is at `k / fs` seconds — seconds since ThorSync start.
    **All timestamps in the pipeline are in this clock.**
-2. `utils2p.synchronization.process_frame_counter(frame_counter, steps_per_frame=1)`
-   labels every sample with the index of the frame being acquired.
-3. Samples are masked to where the scope pin is high and the counter is valid,
-   then `crop_lines` slices from the first to the last valid sample.
-   ⚠️ This is a **contiguous slice, not a boolean mask** — with multiple scope
-   pulses in one file, inter-pulse dead time stays in; that's why
-   `fix_frame_times.frames_by_scope_pulse` exists to re-group frames per pulse.
-4. `get_start_times` takes the time of each counter increment (rising edge).
+2. `counter_increment_times` stamps every increment of the **raw** counter
+   with the time of the first sample at the new count — so frame 0 (the
+   counter's first step off zero) gets a timestamp.
+3. Scope/olf pulses come from `rye2p.thorsync.lines.pulse_times`
+   (max-normalized lines, 0.5 threshold, full sample rate), so analog
+   (0–5 V) and digital (0/1) pins behave identically.
+4. Frames are grouped per scope pulse (`frames_by_scope_pulse`); fast-z
+   truncates each pulse to whole volumes, single-plane keeps all in-window
+   frames (ThorImage saves a started averaging block — see
+   [Validation](#validation)); `stack_times` is `kept[::steps_per_frame]`
+   per pulse, with `steps_per_frame` read from `FunctionalImagingSettings`.
+5. Counts are validated against `Experiment.xml` (raises on mismatch) and
+   the ThorSync↔ThorImage pairing is fingerprint-checked.
 
-!!! danger "The legacy path drops the first frame (and first volume)"
-    `get_start_times` is called with the default `zero_based_counter=False` on
-    the **cropped** counter, which already sits at frame 0 at the crop
-    boundary — so frame 0 has no rising edge and is silently dropped:
-    `frame_times[j]` is really the time of physical frame **j+1**, one frame
-    (~17 ms) late everywhere, and the same mechanism shifts `stack_times` by a
-    whole volume (see the convention warning below). Ground-truthed 2026-11-12
-    by bit-exact reproduction of a real `timestamps.npy`
-    (`odor_space_collab` 2023-04-11 fly 2 `megamat1`): saved length was 90,749
-    for an acquisition whose counter recorded 90,752 physical frames (first
-    frame dropped at the crop boundary, 2 dropped after the scope pin fell),
-    vs. 90,740 frames in the saved movie. Known issue #22.
+!!! danger "The pre-step-2 legacy path dropped the first frame (and first volume)"
+    `extract_timestamp_data` used to call `get_start_times` with the default
+    `zero_based_counter=False` on a **cropped** counter, which already sat at
+    frame 0 at the crop boundary — so frame 0 had no rising edge and was
+    silently dropped: `frame_times[j]` was really the time of physical frame
+    **j+1**, one frame (~17 ms) late everywhere, and the same mechanism
+    shifted `stack_times` by a whole volume (see the convention warning
+    below). Ground-truthed 2026-11-12 by bit-exact reproduction of a real
+    `timestamps.npy` (`odor_space_collab` 2023-04-11 fly 2 `megamat1`): saved
+    length was 90,749 for an acquisition whose counter recorded 90,752
+    physical frames, vs. 90,740 frames in the saved movie. Known issue #22 —
+    **fixed in the extraction, but every `timestamps.npy` on disk written by
+    the legacy path still carries the shift** (re-extract, or shift on load).
 
-    The notebook path does **not** have this bug: it runs `get_start_times`
-    on the raw (uncropped) counter, where frame 0 produces a genuine 0→1
-    edge.
-
-The notebook path (`notebooks/thorsync_lines_demo.ipynb`) differs from the
-algorithm above in more ways than the fix: it skips `process_frame_counter`,
-the scope-pin mask, and `crop_lines` entirely (it re-groups frames per scope
-pulse afterwards instead), and — after cell 17 reloads `sync_lines.npz` — it
-computes everything on lines **decimated to 1 kHz**, so its edge times
-(`scope/olf ict/fct`) are quantized to 1 ms rather than the 1/30 ms of the
-legacy path. Frame times still come from counter values, which survive
-decimation.
+The demo notebook (`notebooks/thorsync_lines_demo.ipynb`) now calls the same
+library functions. Before step 2 it computed edge times on lines **decimated
+to 1 kHz** (1 ms quantization, known issue #23) and needed an unexplained
+`scope_fct[1:]` hack; both went away with full-rate edge detection.
 
 **Result — `frame_times`:** 1-D float64, one entry per frame-counter step =
 **one per z-plane, including flyback planes**. Length is
-`n_timepoints × (n_z + n_flyback_frames)` for fast-z — in practice the legacy
-length is off by the dropped/partial frames above and the saved movie length,
+`n_timepoints × (n_z + n_flyback_frames)` for fast-z — for pre-step-2 files
+the length is off by the dropped/partial frames above,
 so **validate, don't assume** (see [Validation](#validation)).
 
 ## How stack (volume) times are computed
@@ -130,28 +130,30 @@ stack_times == frame_times[::steps_per_frame]      # first-plane convention
 
 **Result — `stack_times`:** 1-D float64, one entry per volume (`n_timepoints`).
 
-!!! danger "Three conventions coexist for 'which plane stamps the volume'"
-    Ground-truthed 2026-11-12 against the raw ThorSync h5 + saved outputs of
-    `odor_space_collab` 2023-04-11 fly 2 `megamat1`:
+!!! danger "Files on disk: three conventions for 'which plane stamps the volume'"
+    Since roadmap step 2 **all code paths produce the true first-plane
+    convention** (extraction and `fix_timestamps0` alike). But files written
+    earlier differ by which code produced them — ground-truthed 2026-11-12
+    against the raw ThorSync h5 + saved outputs of `odor_space_collab`
+    2023-04-11 fly 2 `megamat1`:
 
     - **Demo notebooks: true first plane** ✅ — `stack_times = frame_times[::steps_per_frame]`
       by construction, on an unshifted `frame_times`. The committed example
       `data/haoru/timestamps.npy` verifies this (`frame_times[::4] == stack_times`
-      exactly). This is the convention the roadmap standardizes on.
-    - **Legacy `process_thorsync.py:217`: first plane of the *next* volume** —
+      exactly). This is the convention everything now standardizes on.
+    - **Pre-step-2 legacy extraction: first plane of the *next* volume** —
       because of the dropped first frame/volume above, `stack_times[i]` is the
       first-plane time of volume **i+1**: one full volume period late
       (~337 ms in the verified acquisition). Numerically,
       `stack_times == frame_times[19::20]` within the file's own (shifted)
-      arrays — which masquerades as a "last step" convention. Previously this
-      path was wrongly documented here as first-plane.
-    - **`fix_frame_times.fix_timestamps0` (line ~211): last step** of each
+      arrays — which masquerades as a "last step" convention.
+    - **Pre-step-2 `fix_frame_times.fix_timestamps0`: last step** of each
       volume — `(steps_per_frame − 1) / raw_frame_rate` after the true first
       plane (one frame *earlier* than what the legacy extractor produces).
 
-    Consequence: any `timestamps.npy` produced by the legacy path (most
-    `odor_space_collab`-era files) has every `stack_times[t]` ≈ one volume
-    period later than movie volume `t`'s true first-plane time. See
+    Consequence: any `timestamps.npy` produced by the pre-step-2 legacy path
+    (most `odor_space_collab`-era files) has every `stack_times[t]` ≈ one
+    volume period later than movie volume `t`'s true first-plane time. See
     [known issues](known-issues.md) #2 and #22.
 
 ## Flyback planes: the movie and the timestamps disagree
@@ -241,27 +243,34 @@ Rising/falling edges of the TTL lines, in seconds since ThorSync start
 | `scope_ict`, `scope_fct` | `scope_pin` | microscope acquisition start/stop (one pair per scope pulse) |
 | `olf_ict`, `olf_fct` | `olf_disp_pin` | odor delivery on/off (one pair per trial) |
 
-Edge detection: `utils2p.synchronization.edges(line, size=...)` — and `size`
-is the magnitude of the **sample-to-sample jump**, *not* an absolute level
-threshold. The legacy path uses `size=2.5`, which works on the upstairs rig's
-analog ~0–5 V TTLs (verified: a 0→4.9 V step is one 4.9-unit jump) but finds
-**zero edges** on a digital 0/1 line, where every jump has magnitude 1 (see
-[known issues](known-issues.md) #3). The notebooks instead normalize each line
-by its max — making every real transition a jump of ~1.0 — and use
-`size=0.5–0.8`, which works on both rigs precisely *because* of the jump
-semantics. Two further notebook quirks to know about: edges are computed on
-the **1 kHz-decimated** lines (1 ms quantization, see above), and the scope
-falling-edge cell drops the first falling edge (`scope_fct = ...[1:]`) as an
-undocumented rig-specific hack.
+Edge detection now lives in
+[`rye2p.thorsync.lines`](api/thorsync-timestamps.md): every line is
+max-normalized to [0, 1] first, then thresholded at 0.5
+(`pulse_times` / `edge_times`, full sample rate), so analog ~0–5 V and
+digital 0/1 pins behave identically.
+
+Historical context for old code and files: the pre-step-2 legacy path used
+`utils2p.synchronization.edges(line, size=2.5)` — `size` is the magnitude of
+the **sample-to-sample jump**, not a level threshold — which works on the
+upstairs rig's analog ~0–5 V TTLs but finds **zero edges** on a digital 0/1
+line (known issue #3, fixed). The pre-step-2 notebook computed edges on
+**1 kHz-decimated** lines (1 ms quantization) and dropped the first scope
+falling edge (`scope_fct = ...[1:]`) as an undocumented hack (known issue
+#23, fixed — the notebook now calls the library at full rate).
 
 ## Single-plane recordings
 
 For single-plane (no fast-z) acquisitions with frame averaging,
 `steps_per_frame = n_averaging` (each saved frame is the average of
 `n_averaging` raw frames), and `stack_times` holds the time of the first raw
-frame of each averaging block. `FunctionalImagingSettings.from_xml` is the one
-place that derives this correctly; the legacy `process_thorsync.py` has a
-double-decimation bug here (see [known issues](known-issues.md)).
+frame of each averaging block — including a trailing block that starts inside
+the scope pulse but completes after the trigger fall, which ThorImage saves
+(ground-truthed 2026-11-19 on `megamat1_calyx`: 92,125 in-window raw frames →
+23,032 = ceil(92,125/4) saved frames). `FunctionalImagingSettings.from_xml`
+derives `steps_per_frame` with both guards (`fast_z`, `averageMode`), and
+since roadmap step 2 the extraction reads it from there — the legacy path's
+double-decimation bug (known issue #1) is fixed; files it wrote earlier still
+carry it.
 
 !!! danger "What single-plane files in the wild actually contain (ground-truthed 2026-11-12)"
     Verified on `odor_space_collab` 2023-04-11 fly 2's two calyx recordings
@@ -298,10 +307,14 @@ Real recordings misbehave; this module contains the repairs, applied between
    contained in any scope pulse (`fix_olf_times`; the default repair for fast-z).
 3. **Partial volumes** at the end of a scope pulse — `fix_timestamps0`
    regroups `frame_times` per scope pulse, truncates each pulse to whole
-   volumes, and adds the keys `split_frame_times`, `split_stack_times`,
-   `n_frame_times_per_pulse`, `n_stack_times_per_pulse` (the latter is used as
-   tiff split points by `downsample_stack.py`). ⚠️ Uses the last-step stack-time
-   convention — see the warning above.
+   volumes (fast-z; single-plane keeps all in-window frames), and adds the
+   keys `split_frame_times`, `split_stack_times`, `n_frame_times_per_pulse`,
+   `n_stack_times_per_pulse` (the latter is used as tiff split points by
+   `downsample_stack.py`). Since roadmap step 2 it stamps the **first plane**
+   (it used the last step before — see the warning above) — but it is only
+   needed for pre-step-2 `timestamps0.npy` files; the unified extraction
+   already returns regrouped output, and old inputs still carry the dropped
+   first frame (#22), so prefer re-extracting from the h5.
 4. **Temporal downsampling** — `downsample_timestamps` / `edit_timestamps_file`
    write `timestamps_tsub{N}.npy` to match a temporally binned movie.
 5. **Manual rescue** — the `__main__` block is an interactive, cell-by-cell

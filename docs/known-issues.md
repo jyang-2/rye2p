@@ -5,35 +5,39 @@ checkpoint commit (`67ee170`). Roadmap steps that fix each are noted.
 
 ## Timing correctness (the ones that can silently corrupt science)
 
-1. **Single-plane `stack_times` double decimation** —
-   `process_thorsync.py:211` computes `steps_per_frame = n_z + n_flyback`
+1. ~~**Single-plane `stack_times` double decimation**~~ **fixed (step 2)** —
+   the legacy extraction computed `steps_per_frame = n_z + n_flyback`
    with no `fast_z` guard (`get_n_z()` reads `ZStage/steps`, which isn't forced
-   to 1 for single-plane recordings), then `:307` decimates *again* by
-   `n_averaging`. `FunctionalImagingSettings.from_xml` has the correct logic;
-   the notebook path reads it and is trustworthy. Confirmed in the wild
-   (2026-11-12): single-plane `timestamps0.npy` files on 2023-04-11/2 carry
-   the `steps_per_frame=20` garbage (`stack_times` = 4,606 = frames/20); the
-   final files were later hand-rescued (see #24). A second facet (2026-11-19):
+   to 1 for single-plane recordings), then decimated *again* by
+   `n_averaging`. Confirmed in the wild (2026-11-12): single-plane
+   `timestamps0.npy` files on 2023-04-11/2 carry the `steps_per_frame=20`
+   garbage (`stack_times` = 4,606 = frames/20); the final files were later
+   hand-rescued (see #24). A second facet (2026-11-19):
    `utils2p.Metadata.get_n_averaging()` returns `LSM/averageNum` without
-   checking `averageMode`, so the `:307` decimation fires even with averaging
-   **off** — `megamat1_calyx_001` (averageMode=0, averageNum=4) would get
-   `stack_times` = 4,606[::4] = 1,152 vs the correct 92,125; re-derivation
-   confirms the current end-to-end code produces 1,152 for *both* calyx
-   recordings. *Fix: roadmap step 2.*
+   checking `averageMode`, so the decimation fired even with averaging
+   **off** — re-derivation confirmed the old end-to-end code produced 1,152
+   stack times for *both* calyx recordings. Now every path reads
+   `steps_per_frame` from `FunctionalImagingSettings` (which guards both
+   `fast_z` and `averageMode`) and decimates exactly once, inside the unified
+   extraction. Files written before the fix still carry the garbage.
 
-2. **Stack-time convention conflict** (re-attributed by the 2026-11-12
-   ground-truth check, see #22) — the notebooks stamp each volume with its
-   true **first** plane's time; `process_thorsync.py:217` produces the first
-   plane of the **next** volume (one volume period late — a consequence of
-   #22, not of the grouping); `fix_frame_times.py:211` (`fix_timestamps0`)
-   uses the **last** step. Three different stamps depending on which code
-   produced/repaired the file. *Fix: standardize first-plane, roadmap step 2.*
+2. ~~**Stack-time convention conflict**~~ **fixed (step 2)** (re-attributed
+   by the 2026-11-12 ground-truth check, see #22) — the notebooks stamped
+   each volume with its true **first** plane's time; the legacy extraction
+   produced the first plane of the **next** volume (one volume period late —
+   a consequence of #22); `fix_timestamps0` used the **last** step. All code
+   paths now produce the true first-plane convention (`fix_timestamps0`'s
+   last-step indexing fixed too). Files on disk keep whichever convention
+   their producer had — see the convention box in
+   [timestamps.md](timestamps.md).
 
-3. **Analog-voltage assumptions on a digital rig** — `scope_pin > 1` masks and
-   hard-coded 2.5 V thresholds (`process_thorsync.py:204, 219, 225, 233`) are
-   all-False on the downstairs rig's digital (0/1) `scopePin`, crashing
-   `crop_lines` on an empty index. Notebooks normalize to [0,1] and threshold at
-   0.5–0.8 instead. *Fix: normalize-first edge detection in the library, roadmap step 2.*
+3. ~~**Analog-voltage assumptions on a digital rig**~~ **fixed (step 2)** —
+   `scope_pin > 1` masks and hard-coded 2.5 V thresholds in the legacy
+   extraction were all-False on the downstairs rig's digital (0/1)
+   `scopePin`, crashing `crop_lines` on an empty index. Edge detection now
+   lives in `thorsync/lines.py`: lines are max-normalized to [0,1] and
+   thresholded at 0.5, so analog and digital pins behave identically.
+   (Not yet re-verified against a real downstairs recording — see WORKLOG.)
 
 4. ~~**Validation only prints**~~ **fixed (step 2)** — count mismatches vs
    `Experiment.xml` used to be printed, not raised (legacy
@@ -50,11 +54,13 @@ checkpoint commit (`67ee170`). Roadmap steps that fix each are noted.
    (`validate_pairing`: counter max + realized frame rate vs
    `Experiment.xml`). Old files saved before the fix remain unvalidated.
 
-5. **Fuzzy line matching can double-assign** — the legacy matcher
-   (`process_thorsync.py:109`) does per-column argmax with no 1:1 constraint;
-   two canonical names can map to the same h5 line. `thorsync/linenames.py:41`
-   (Hungarian) fixes this but nothing calls it; the per-rig YAML maps are the
-   real successor. *Fix: roadmap step 2.*
+5. **Fuzzy line matching can double-assign** — *mostly fixed (step 2)*: the
+   unified extraction resolves lines through the per-rig YAML maps
+   (`lines.load_sync_lines` → `linenames.match_lines`), with Hungarian fuzzy
+   matching as a warned fallback (pass `microscope=` to get the map). The
+   old per-column argmax matcher (`process_thorsync.py::get_matched_thorsync_lines`)
+   still exists but nothing on the extraction path calls it — it is deleted
+   in roadmap step 3.
 
 ## Import-time side effects (hazardous to tooling and humans)
 
@@ -125,27 +131,28 @@ its saved outputs; the legacy extraction was reproduced **bit-exactly** from
 `SyncData001`, so these are confirmed behaviors, not hypotheses. Details in
 [Timestamps explained](timestamps.md).
 
-22. **Legacy extraction drops the first frame and first volume** —
-    `extract_timestamp_data` calls `get_start_times` with the default
-    `zero_based_counter=False` on the **cropped** counter
-    (`process_thorsync.py:207, 217`); the cropped line already sits at
-    frame/volume 0, which therefore has no rising edge and is dropped. Every
-    `frame_times[j]` is physical frame j+1 (~17 ms late) and every
-    `stack_times[i]` is the first plane of volume i+1 (**one volume period
+22. ~~**Legacy extraction drops the first frame and first volume**~~
+    **fixed in code (step 2); files on disk still affected** — the old
+    `extract_timestamp_data` called `get_start_times` with the default
+    `zero_based_counter=False` on the **cropped** counter; the cropped line
+    already sat at frame/volume 0, which therefore had no rising edge and was
+    dropped. Every `frame_times[j]` was physical frame j+1 (~17 ms late) and
+    every `stack_times[i]` the first plane of volume i+1 (**one volume period
     late**, ~337 ms in the verified acquisition — larger than the per-plane
-    error `plane_times` was built to remove). Affects every legacy-produced
-    `timestamps.npy`. *Fix: `zero_based_counter=True` (or extract before
-    cropping), roadmap step 2; downstream files need re-extraction or a
-    one-volume shift on load.*
+    error `plane_times` was built to remove). The unified extraction stamps
+    raw counter increments (`counter_increment_times`), so frame 0 / volume 0
+    are kept. **Every `timestamps.npy` written by the pre-step-2 legacy path
+    still carries the shift** — re-extract, or shift one volume on load.
 
-23. **Notebook edge times are 1 ms-quantized and drop a falling edge** —
-    `notebooks/thorsync_lines_demo.ipynb` cell 17 reloads the 1 kHz
-    `sync_lines.npz`, so all `scope/olf ict/fct` computed after it carry 1 ms
-    quantization (the doc's "all timestamps on the 30 kHz clock" holds only
-    for the legacy path and for counter-derived frame times); cell 29 also
-    discards the first scope falling edge (`scope_fct = ...[1:]`) as an
-    unexplained rig-specific hack. *Fix: compute edges at full rate in
-    `thorsync/lines.py`, roadmap steps 1–2.*
+23. ~~**Notebook edge times are 1 ms-quantized and drop a falling edge**~~
+    **fixed (step 2)** — `notebooks/thorsync_lines_demo.ipynb` reloaded the
+    1 kHz `sync_lines.npz` and computed all `scope/olf ict/fct` from it (1 ms
+    quantization), and discarded the first scope falling edge
+    (`scope_fct = ...[1:]`) as an unexplained hack. The notebook now computes
+    frame times and edges from the full-rate lines via
+    `thorsync.lines.pulse_times` / `timestamps.counter_increment_times`
+    (the 1 kHz copy is loaded as `sync_lines_1khz`, for plotting only), and
+    the `[1:]` hack is gone.
 
 24. **Hand-rescued single-plane files are internally inconsistent** —
     single-plane `timestamps.npy` files repaired via the
@@ -157,8 +164,11 @@ its saved outputs; the legacy extraction was reproduced **bit-exactly** from
     exactly; every timestamp one raw frame (~16.6 ms) late; last entry
     synthetic; `frame_times` left unrepaired (92,124 ≠ 23,032×4 resp.
     92,125×1), and `timestamps0.npy` still holds the #1-bug garbage
-    `stack_times` (4,606 = frames/20). *Fix: re-extract after the #22 fix,
-    roadmap step 2; the `__main__` scratchpad retires into `thorsync/repair.py`.*
+    `stack_times` (4,606 = frames/20). *The step-2 extraction now produces
+    these files correctly from the h5 (the GUI verified both calyx recordings
+    against ground truth) — what remains is re-extracting the affected files;
+    the `__main__` scratchpad retires into `thorsync/repair.py` (roadmap
+    step 3).*
 
 ## Found during the step-1 promotion (2026-11-19)
 
