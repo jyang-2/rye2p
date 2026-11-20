@@ -23,10 +23,11 @@ EXAMPLE_TIMESTAMPS = Path(__file__).parent.parent / "data" / "haoru" / "timestam
 
 
 class FakeSettings:
-    def __init__(self, steps_per_frame, n_frames, n_timepoints):
+    def __init__(self, steps_per_frame, n_frames, n_timepoints, fast_z=True):
         self.steps_per_frame = steps_per_frame
         self.n_frames = n_frames
         self.n_timepoints = n_timepoints
+        self.fast_z = fast_z
 
 
 def test_frames_by_scope_pulse_grouping():
@@ -73,24 +74,58 @@ def test_validate_frame_counts_ok():
 
 def test_validate_frame_counts_accepts_settings_dict():
     frame_times = np.arange(20, dtype=float)
-    settings = {"steps_per_frame": 4, "n_frames": 20, "n_timepoints": 5}
+    settings = {"steps_per_frame": 4, "n_frames": 20, "n_timepoints": 5,
+                "fast_z": True}
     assert validate_frame_counts(frame_times, [0.0], [19.5], settings)["ok"]
 
 
-def test_validate_frame_counts_warns_on_mismatch():
+def test_validate_frame_counts_warns_on_mismatch_when_not_strict():
     frame_times = np.arange(19, dtype=float)  # one frame short of 5 volumes
     settings = FakeSettings(steps_per_frame=4, n_frames=20, n_timepoints=5)
     with pytest.warns(UserWarning, match="frame-count mismatch"):
-        result = validate_frame_counts(frame_times, [0.0], [19.5], settings)
+        result = validate_frame_counts(frame_times, [0.0], [19.5], settings,
+                                       strict=False)
     assert not result["ok"]
     assert result["expected_n_timepoints"] == 4
 
 
-def test_validate_frame_counts_strict_raises():
+def test_validate_frame_counts_raises_by_default():
+    """Known issue #4: strict=True is the default since roadmap step 2 — a
+    count mismatch must raise, not warn."""
     frame_times = np.arange(19, dtype=float)
     settings = FakeSettings(steps_per_frame=4, n_frames=20, n_timepoints=5)
     with pytest.raises(ValueError, match="frame-count mismatch"):
-        validate_frame_counts(frame_times, [0.0], [19.5], settings, strict=True)
+        validate_frame_counts(frame_times, [0.0], [19.5], settings)
+
+
+def test_expected_frame_counts_single_plane_keeps_partial_block():
+    """ThorImage saves an averaging block that starts in-window even when it
+    completes after the trigger fall (ground-truthed on megamat1_calyx:
+    92,125 in-window raw frames -> 23,032 saved frames = ceil(92,125/4))."""
+    frame_times = np.arange(9, dtype=float)  # 9 raw frames, blocks of 4
+    n_frames, n_timepoints = expected_frame_counts(
+            frame_times, [0.0], [8.5], steps_per_frame=4, fast_z=False)
+    assert n_timepoints == 3  # ceil(9/4)
+    # Streaming/frames counts SAVED (averaged) frames for single-plane
+    assert n_frames == 3
+
+
+def test_expected_frame_counts_single_plane_no_averaging():
+    frame_times = np.arange(9, dtype=float)
+    n_frames, n_timepoints = expected_frame_counts(
+            frame_times, [0.0], [8.5], steps_per_frame=1, fast_z=False)
+    assert n_timepoints == 9
+    assert n_frames == 9
+
+
+def test_validate_frame_counts_single_plane_averaging():
+    # 9 in-window raw frames, 4x averaging -> 3 saved frames; xml records
+    # n_timepoints == n_frames == 3 for single-plane recordings
+    frame_times = np.arange(9, dtype=float)
+    settings = FakeSettings(steps_per_frame=4, n_frames=3, n_timepoints=3,
+                            fast_z=False)
+    result = validate_frame_counts(frame_times, [0.0], [8.5], settings)
+    assert result["ok"]
 
 
 @pytest.mark.skipif(not EXAMPLE_TIMESTAMPS.exists(), reason="example data not present")

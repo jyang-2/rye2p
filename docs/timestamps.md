@@ -320,13 +320,20 @@ single-plane/averaging recordings):
 ```python
 from rye2p.thorsync.timestamps import validate_frame_counts
 
-validate_frame_counts(frame_times, scope_ict, scope_fct, settings)  # warns
-validate_frame_counts(..., strict=True)                             # raises
+validate_frame_counts(frame_times, scope_ict, scope_fct, settings)  # raises on mismatch
+validate_frame_counts(..., strict=False)                            # downgrade to warning
 ```
 
-⚠️ In the legacy path this check only **prints** — a mismatched
-`timestamps.npy` is still saved (and `validate_frame_counts` currently only
-*warns* by default; roadmap step 2 flips it to `strict=True`). This is not
+Since roadmap step 2 the check **raises by default** and the unified
+extraction (`thorsync.timestamps.extract_timestamps`) calls it before
+returning, so a mismatched `timestamps.npy` can no longer be saved silently.
+The validator also encodes ThorImage's per-mode save rules (ground-truthed
+2026-11-19): fast-z discards a partial volume at the trigger fall (floor);
+single-plane **saves** an averaging block that starts in-window even when it
+completes after the fall (ceil), and `Streaming/frames` counts frames in the
+.raw file — raw planes for fast-z, *averaged* frames for single-plane.
+
+⚠️ Files written before the fix were never validated. This is not
 hypothetical: the verified `odor_space_collab` 2023-04-11/2/megamat1 file was
 saved with `len(frame_times) == 90749` against an expected 90,740 (not even
 divisible by `steps_per_frame=20` — `plane_times` refuses it outright).
@@ -338,4 +345,9 @@ fingerprints identify the right episode: acquisition order/time of day,
 frame rate (median counter-increment spacing) vs. `frameRate` in
 `Experiment.xml`. During the ground-truth check, these fingerprints showed the
 2023-04-11 fly 2 pairing is `megamat1`↔`SyncData001` (not `SyncData003`,
-which belongs to `megamat1_calyx_001`).
+which belongs to `megamat1_calyx_001`). The last two fingerprints are
+automated in `thorsync.timestamps.validate_pairing` (raises by default;
+calibrated on the three ground-truthed recordings: correct pairings agree to
+~0.1 % in rate and overrun the counter by ≤ one partial volume + scanner
+tail, the observed wrong pairing was ~1.5 % off in rate), and
+`extract_timestamps_from_files` runs it before extracting.

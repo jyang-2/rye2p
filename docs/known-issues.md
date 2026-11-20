@@ -35,15 +35,20 @@ checkpoint commit (`67ee170`). Roadmap steps that fix each are noted.
    `crop_lines` on an empty index. Notebooks normalize to [0,1] and threshold at
    0.5–0.8 instead. *Fix: normalize-first edge detection in the library, roadmap step 2.*
 
-4. **Validation only prints** — count mismatches vs `Experiment.xml` are
-   printed, not raised (`process_thorsync.py:297-310`; the `raise`s in
-   `fix_timestamps0` are commented out). A wrong `timestamps.npy` still gets
-   saved — verified in the wild: `odor_space_collab` 2023-04-11/2/megamat1 was
-   saved with 90,749 frame times (expected 90,740; not divisible by
-   `steps_per_frame`). Step 1 promoted the check into
-   `thorsync.timestamps.validate_frame_counts(..., strict=...)`, which warns by
-   default and raises with `strict=True`. *Remaining fix: make the extraction
-   path call it and flip the default to raise, roadmap step 2.*
+4. ~~**Validation only prints**~~ **fixed (step 2)** — count mismatches vs
+   `Experiment.xml` used to be printed, not raised (legacy
+   `process_thorsync.py`; the `raise`s in `fix_timestamps0` commented out),
+   so a wrong `timestamps.npy` still got saved — verified in the wild:
+   `odor_space_collab` 2023-04-11/2/megamat1 was saved with 90,749 frame
+   times (expected 90,740; not divisible by `steps_per_frame`). Now
+   `thorsync.timestamps.validate_frame_counts` **raises by default**
+   (`strict=False` downgrades to a warning), the unified extraction
+   (`thorsync.timestamps.extract_timestamps`) calls it before returning, and
+   the validator knows the single-plane save rule (a partial averaging block
+   that starts in-window is saved — ceil, not floor). The
+   ThorSync↔ThorImage pairing is fingerprint-checked too
+   (`validate_pairing`: counter max + realized frame rate vs
+   `Experiment.xml`). Old files saved before the fix remain unvalidated.
 
 5. **Fuzzy line matching can double-assign** — the legacy matcher
    (`process_thorsync.py:109`) does per-column argmax with no 1:1 constraint;
