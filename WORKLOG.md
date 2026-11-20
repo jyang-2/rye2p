@@ -41,11 +41,10 @@ Fresh sessions are cheap — this file is the handoff.
   machine-read; 2023-04-11/2: megamat1↔SyncData001 confirmed by log AND
   data fingerprints).
 - **Side project:** ThorSync Timestamp GUI lives in `../rye2p-gui` (own git
-  repo): FastAPI backend + standalone Preact page, run with
-  `twoppp311 python -m uvicorn thorsync_gui.server:app --port 8765 --app-dir
-  /home/remy/PycharmProjects/rye2p-gui`. Verified end-to-end on
-  megamat1/SyncData001 (first-plane stack times, 4537/4537). Mirrors of the
-  code also live on the claude.ai design canvas.
+  repo, private: github.com/jyang-2/rye2p-gui, has its own CLAUDE.md +
+  launcher `thorsync-gui`). Verified on all three 2023-04-11/2 recording
+  types (fast-z, 4x averaged, single-plane raw) against ground truth.
+  **Work on the GUI in sessions rooted in `../rye2p-gui`, not here.**
 - **Parallel sessions:** before starting a second simultaneous session, claim a
   line here (branch + worktree path), e.g.
   `- session B: branch fix-timing, worktree ../rye2p-timing`.
@@ -73,6 +72,14 @@ Fresh sessions are cheap — this file is the handoff.
   npy / parquet / JSON / new ~1 MB `timestamps.h5` sidecar (arrays +
   provenance attrs incl. z_plane_um from Experiment.xml), user-selectable
   export folder.
+- Later same day: launcher (`thorsync-gui` command, pyproject, desktop entry,
+  `?folder=` prefill); user-selectable export folder + refusal of any export
+  under tensor-archive; **single-plane verified in the GUI** (calyx 4x avg:
+  23,032/23,032 first-of-block, calyx_001: 92,125/92,125; three more bugs
+  found+fixed: averageMode ignored in xml parse, missing averaging decimation
+  in the page, a stacks-aliasing regression). ThorImage trigger-tail rule now
+  surfaced as an explained warning. Both repos pushed to GitHub (rye2p-gui
+  created private).
 
 **Why**
 - The GUI gives a correct, inspectable extraction path (first-plane,
