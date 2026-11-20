@@ -23,16 +23,20 @@ Fresh sessions are cheap — this file is the handoff.
 
 ## NOW
 
-- **Active work:** `cleanup` branch — **roadmap step 1 complete** (notebook
-  pipeline promoted into the library; 4 commits, all tests green).
-- **Next action:** roadmap step 2 — fix timing correctness (see
-  [docs/roadmap.md](docs/roadmap.md)): `steps_per_frame` from
-  `FunctionalImagingSettings` everywhere (#1 incl. the averageMode facet),
-  legacy dropped-first-frame/volume (#22), first-plane stack-time convention
-  (#2), normalize-first edge detection at full rate (#3/#23), validation
-  raises by default (`validate_frame_counts` exists — flip `strict=True` and
-  call it from extraction), pairing-fingerprint check. Regression tests on
-  synthetic traces + `data/haoru`.
+- **Active work:** `cleanup` branch — **roadmap step 2 complete** (timing
+  correctness: unified extraction in the library, verified against all three
+  ground-truthed 2023-04-11/2 recordings; 3 commits, 73 tests green).
+- **Next action:** roadmap step 3 — deduplicate and guard: delete the
+  verbatim duplicates (#21), strip import-time execution (`master.py`,
+  `datadirs` → `config.py`, `pid.py`, `scrape_chem.py`), retire the
+  `fix_frame_times.__main__` scratchpad into `thorsync/repair.py`, fix the
+  small catalogued bugs (`read_gctr`, `tsub,` tuples, broken script imports).
+  **Also queue:** decide mass re-extraction of legacy `timestamps.npy` files
+  (every pre-step-2 file still carries #22's one-volume-late stack times;
+  the extraction + pairing check now make a sweep cheap), and run a real
+  downstairs (digital scopePin) recording through
+  `extract_timestamps_from_files` — #3 is fixed by construction + synthetic
+  test but not yet verified on downstairs data.
 - **Heads-up for downstream work:** legacy `timestamps.npy` files (e.g. all
   odor_space_collab-era) have `stack_times[i]` = first plane of volume i+1
   (~337 ms late) and `frame_times` one frame late — see known issues #22 and
@@ -50,6 +54,68 @@ Fresh sessions are cheap — this file is the handoff.
 - **Parallel sessions:** before starting a second simultaneous session, claim a
   line here (branch + worktree path), e.g.
   `- session B: branch fix-timing, worktree ../rye2p-timing`.
+
+## 2026-11-19 (evening) — Roadmap step 2 done: timing correctness
+
+**Done** (3 commits on `cleanup`: `3c49c92`, `4586a14`, `cf9c233`)
+- **`rye2p/thorsync/lines.py`** (new): max-normalize → threshold-0.5 edge
+  detection at the full sample rate (#3: digital 0/1 pins work; #23: no 1 kHz
+  quantization), pulse matching + brief-gap merging (ported from the verified
+  GUI), `sample_rate_from_xml` (active-board enabled rate),
+  `load_sync_lines` via the per-rig YAML maps (#5 on the extraction path;
+  `linenames.match_lines` gained a `line_names` subset param).
+- **Unified extraction** `thorsync/timestamps.py::extract_timestamps` /
+  `extract_timestamps_from_files`: raw-counter increment times keep frame 0 /
+  volume 0 (#22); `steps_per_frame` from `FunctionalImagingSettings` (#1 incl.
+  averageMode facet); first-plane `stack_times` per scope pulse (#2); fast-z
+  floors partial volumes, single-plane keeps all in-window frames (started
+  averaging block is saved — ceil). `validate_frame_counts` **raises by
+  default** (#4) and knows the per-mode save rules;
+  `expected_frame_counts` learned `fast_z` (xml `Streaming/frames` counts
+  .raw-file frames: raw planes for fast-z, *averaged* frames for
+  single-plane — so = timepoints there). New `validate_pairing`
+  (counter max + realized frame rate vs xml; run automatically by
+  `extract_timestamps_from_files`).
+- **Legacy path + notebook moved onto it**: `process_thorsync.
+  extract_timestamp_data`/`convert_thorsync_to_timestamps_npy` delegate
+  (no more single-plane re-decimation; `fix_olf_times` applied uniformly;
+  nothing saved when validation fails; new `microscope=`/`strict=` params).
+  `fix_timestamps0` fixed (first-plane, settings-derived steps, warns) but
+  demoted to pre-step-2-file repair. `thorsync_lines_demo.ipynb` computes
+  frame/edge times at full rate via the library (`sync_lines_1khz` is
+  plotting-only; `scope_fct[1:]` hack gone).
+- **Verified read-only against all three ground-truthed recordings**
+  (upstairs 2023-04-11/2): megamat1 4,537/4,537 stacks, 90,740/90,740 frames,
+  `frame_times[::20] == stack_times`; calyx 4x-avg 23,032/23,032; calyx_001
+  92,125/92,125; 51 olf pulses each; wrong pairing (megamat1 xml ×
+  SyncData003) refused by the fingerprint check. Note: megamat1 stack 0 =
+  2.5301 s (sample 75903/30 kHz); the GUI README's "2.5304 s" is the same
+  physical sample under a different clock readout/rounding, not a shift.
+- Tests 39 → 73 (lines, extraction regressions pinning each issue, pairing,
+  save-rule validator cases); mkdocs clean; known-issues #1–#5, #22, #23
+  struck through; roadmap + timestamps.md rewritten around the unified path.
+
+**Why**
+- Step 2 is the science-critical step; the GUI session (2026-11-19) had
+  already ground-truthed the exact extraction semantics (frame-0 kept,
+  first-plane, averaging save rule), so this was a port + regression-pin,
+  not a redesign.
+
+**Decisions**
+- `Streaming/frames` semantics pinned by reading all three real XMLs:
+  for single-plane it equals *timepoints* (averaged frames), so the
+  validator compares in .raw-file frame units per mode.
+- Pairing tolerances calibrated on the three recordings: rate rtol 0.5 %
+  (correct ≤0.1 % off, wrong ~1.5 %), counter overrun allowed up to
+  `steps_per_frame + 8` (observed +12/+2/+2).
+- Old `timestamps.npy` files are NOT silently reinterpreted — re-extraction
+  (or an explicit shim) is a queued decision, see NOW.
+- GUI endgame unchanged: once rye2p is installable in its env, rye2p-gui
+  deletes its duplicated `core.py` extraction and imports the library.
+
+**Open questions**
+- Mass re-extraction sweep of processed_data vs load-time shim (#22 files).
+- Downstairs digital-scopePin recording still unverified end-to-end.
 
 ## 2026-11-19 (later) — Roadmap step 1 done: notebook pipeline → library
 
