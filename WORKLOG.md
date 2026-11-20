@@ -50,6 +50,43 @@ Fresh sessions are cheap — this file is the handoff.
   line here (branch + worktree path), e.g.
   `- session B: branch fix-timing, worktree ../rye2p-timing`.
 
+## 2026-11-19 — Single-plane re-derivation; ThorSync GUI built + verified
+
+**Done**
+- Re-derived single-plane timestamps from SyncData002/003 with current code:
+  saved timestamps0.npy reproduced bit-exactly; end-to-end the legacy path
+  would save stack_times = 1,152 for BOTH calyx recordings (issue #1 gains a
+  facet: `get_n_averaging()` ignores averageMode). Save-rule resolved for
+  averaging blocks: a block starting in-window that completes after the
+  trigger fall IS kept (calyx: 92,128 raw frames saved, 92,125 in-window).
+- Piezo phase pinned with counter-aligned volume index: planes 0–15 ascend
+  ~34 mV/step; flyback = one step up to the max then a 3-frame descent;
+  monitor settles ~5–8 ms per step; FrameOut is identical for every frame
+  (cannot mark flyback). Docs corrected (earlier "4-frame descent" wording).
+- **ThorSync Timestamp GUI** (`../rye2p-gui`, own git repo + README): ported
+  the design-canvas mockup to a standalone Preact page served by its FastAPI
+  backend; verified end-to-end on megamat1/SyncData001 (4,537/4,537 stacks,
+  90,740/90,740 frames, stack 0 @ 2.5304 s = true first plane, piezo-vs-
+  position z clean). Verification caught and fixed: wrong SampleRate node
+  (1 MHz vs 30 kHz), last-step stack stamps, piezo sampled mid-slew, export
+  dir defaulting onto tensor-archive (now refused server-side). Exports:
+  npy / parquet / JSON / new ~1 MB `timestamps.h5` sidecar (arrays +
+  provenance attrs incl. z_plane_um from Experiment.xml), user-selectable
+  export folder.
+
+**Why**
+- The GUI gives a correct, inspectable extraction path (first-plane,
+  frame-0-kept) ahead of roadmap step 2, plus hand-repair for broken
+  recordings — and its verification doubled as more ground-truthing.
+
+**Decisions**
+- GUI stays a sibling repo (not in rye2p) until the step-1/2 library exists;
+  its `timestamps.h5` sidecar is the candidate long-term timestamps format.
+
+**Open questions**
+- Downstairs (digital scopePin) recording not yet run through the GUI.
+- When step 2 lands: adopt sidecar h5 in rye2p's loader?
+
 ## 2026-11-12 — ThorSync ground-truth check (upstairs rig)
 
 **Done**
