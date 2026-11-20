@@ -312,14 +312,24 @@ Real recordings misbehave; this module contains the repairs, applied between
 
 Counts are checked against `Experiment.xml`:
 `len(frame_times) == steps_per_frame × n_timepoints` and
-`len(stack_times) == n_timepoints`. ⚠️ In the legacy path this check only
-**prints** — a mismatched `timestamps.npy` is still saved. This is not
+`len(stack_times) == n_timepoints`. Use
+[`rye2p.thorsync.timestamps.validate_frame_counts`](api/thorsync-timestamps.md)
+(promoted from the old notebook cell in roadmap step 1; works for fast-z *and*
+single-plane/averaging recordings):
+
+```python
+from rye2p.thorsync.timestamps import validate_frame_counts
+
+validate_frame_counts(frame_times, scope_ict, scope_fct, settings)  # warns
+validate_frame_counts(..., strict=True)                             # raises
+```
+
+⚠️ In the legacy path this check only **prints** — a mismatched
+`timestamps.npy` is still saved (and `validate_frame_counts` currently only
+*warns* by default; roadmap step 2 flips it to `strict=True`). This is not
 hypothetical: the verified `odor_space_collab` 2023-04-11/2/megamat1 file was
 saved with `len(frame_times) == 90749` against an expected 90,740 (not even
-divisible by `steps_per_frame=20` — `plane_times` refuses it outright). Always
-eyeball the printed check, or re-verify downstream (e.g.
-`scripts/for_yang/check_frame_number.py`, or cell 8 of
-`notebooks/convert_thorimage_metadata_settings.ipynb`).
+divisible by `steps_per_frame=20` — `plane_times` refuses it outright).
 
 Also validate the **pairing** of ThorSync episode ↔ ThorImage folder before
 trusting any timestamps: nothing in either file names the other. Three cheap

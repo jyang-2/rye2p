@@ -112,6 +112,11 @@ deleted (it stays recoverable in git history).
   `rye2p/data/microscopes/*/thorsync_lines.yaml` (package data);
   `thorsync/linenames.py` gains `load_line_map` + `match_lines` (YAML primary,
   Hungarian fuzzy matching fallback-only, heavy imports now lazy) + tests.
+- ✅ **Step 1 complete**: frame-count validator promoted into
+  `thorsync/timestamps.py` (`frames_by_scope_pulse`, `expected_frame_counts`,
+  `validate_frame_counts(..., strict=False)` — warns now, step 2 flips the
+  default to raise; covers single-plane/averaging, not just fast-z) + tests;
+  both notebook copies of the validator cell now call the library.
 - ✅ ThorSync ground-truth check against a real upstairs acquisition
   (`odor_space_collab` 2023-04-11 fly 2): line inventory added to
   [timestamps.md](timestamps.md) and both `thorsync_lines.yaml` files; legacy

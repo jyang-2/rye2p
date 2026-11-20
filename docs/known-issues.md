@@ -40,7 +40,10 @@ checkpoint commit (`67ee170`). Roadmap steps that fix each are noted.
    `fix_timestamps0` are commented out). A wrong `timestamps.npy` still gets
    saved — verified in the wild: `odor_space_collab` 2023-04-11/2/megamat1 was
    saved with 90,749 frame times (expected 90,740; not divisible by
-   `steps_per_frame`). *Fix: raise by default, roadmap step 2.*
+   `steps_per_frame`). Step 1 promoted the check into
+   `thorsync.timestamps.validate_frame_counts(..., strict=...)`, which warns by
+   default and raises with `strict=True`. *Remaining fix: make the extraction
+   path call it and flip the default to raise, roadmap step 2.*
 
 5. **Fuzzy line matching can double-assign** — the legacy matcher
    (`process_thorsync.py:109`) does per-column argmax with no 1:1 constraint;
@@ -104,9 +107,11 @@ checkpoint commit (`67ee170`). Roadmap steps that fix each are noted.
     live in `rye2p/thorimage/io.py`; both old modules re-export from it.
     Still open: `get_thorsync_line_names`, `snake_case`,
     `clean_line_name`, `frames_by_scope_pulse`, `np_in_range` each exist in two
-    modules; `match_pulse_times`/`match_scope_times` are byte-identical twins;
+    modules (step 1 made `thorsync/timestamps.py::frames_by_scope_pulse` the
+    canonical, numpy-only copy — `fix_frame_times`' retires in step 3);
+    `match_pulse_times`/`match_scope_times` are byte-identical twins;
     `steps_per_frame` logic is re-derived inline in ≥4 places instead of reading
-    `FunctionalImagingSettings`. *Fix: roadmap steps 1–3.*
+    `FunctionalImagingSettings`. *Fix: roadmap steps 2–3.*
 
 ## Found by the ThorSync ground-truth check (2026-11-12)
 
