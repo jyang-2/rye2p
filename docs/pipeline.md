@@ -18,13 +18,14 @@ The actively used pipeline lives in two notebooks:
 
 **1. `notebooks/pipeline_demo.ipynb`** — stages 2–3 for a whole imaging day.
 Set `RAW_DATA_DIR` / `NAS_PROC_DIR` literals in cell 0, then run
-`preprocess_thorimage(raw_mov_dir, proc_mov_dir, ...)` per ThorImage folder:
-validate folder → copy `Experiment.xml` → write `thorimage_settings.yaml` →
-write `Image_001_001.tif` → split `stk/`.
+[`preprocess_thorimage(raw_mov_dir, proc_mov_dir, ...)`](api/pipeline-preprocess.md)
+per ThorImage folder: validate folder → copy `Experiment.xml` → write
+`thorimage_settings.yaml` → write `Image_001_001.tif` → split `stk/`.
 
 !!! note
-    `preprocess_thorimage()` currently exists **only inside this notebook** —
-    promoting it into `rye2p/pipeline/` is roadmap step 1.
+    `preprocess_thorimage()` was promoted out of the notebook into
+    [`rye2p.pipeline.preprocess`](api/pipeline-preprocess.md) (roadmap step 1);
+    the notebook is now a thin batch driver around the library function.
 
 **2. `notebooks/thorsync_lines_demo.ipynb`** — stages 4–5 for one acquisition
 (use `scripts/for_ruoyi/thorsync_lines_demo.ipynb` for single-plane recordings):

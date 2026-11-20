@@ -5,10 +5,18 @@ Converts a ThorImage acquisition folder into the processed outputs:
 500-frame `stk/` chunks for suite2p/caiman.
 
 !!! note "Current home of this workflow"
-    The up-to-date orchestration function `preprocess_thorimage()` lives in
-    **`notebooks/pipeline_demo.ipynb`** (cell 2) — promoting it into
-    `rye2p/pipeline/` is [roadmap](../roadmap.md) step 1. Until then, run the
-    notebook, or use the library pieces directly as below.
+    The orchestration function
+    [`preprocess_thorimage()`](../api/pipeline-preprocess.md) lives in
+    `rye2p.pipeline.preprocess` (promoted from the notebook in
+    [roadmap](../roadmap.md) step 1). One call does everything below:
+
+    ```python
+    from rye2p.pipeline.preprocess import preprocess_thorimage
+
+    preprocess_thorimage(raw_mov_dir, proc_mov_dir, thorsync_name="SyncData001")
+    ```
+
+    The individual library pieces remain available as below.
 
 ## Inputs
 
@@ -36,7 +44,7 @@ settings = FunctionalImagingSettings.from_xml(raw_mov_dir / "Experiment.xml")
 settings.to_yaml(proc_mov_dir / "thorimage_settings.yaml")
 
 # 2. raw → one big ImageJ tiff (flyback planes are dropped here)
-from rye2p.convert_raw_fn_thorimage import convert_raw_to_tiff, split_tiff_files
+from rye2p.thorimage.io import convert_raw_to_tiff, split_tiff_files
 raw_file = raw_mov_dir / "Image_001_001.raw"
 tiff_file = convert_raw_to_tiff(raw_file, raw_mov_dir.parents[2], proc_mov_dir.parents[2])
 
@@ -63,7 +71,8 @@ validates it, and runs the steps above.
 ## Gotchas
 
 - `split_tiff_files` **silently does nothing** if `stk/` already exists —
-  delete the folder to re-split.
+  pass `overwrite=True` (what `preprocess_thorimage` does) or delete the
+  folder to re-split.
 - `convert_raw_to_tiff` builds the output path by *mirroring the relative path*
   under the raw root, so pass the roots (not the movie dirs) as `raw_dir` /
   `proc_dir`.

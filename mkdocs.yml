@@ -72,6 +72,7 @@ nav:
       - thorimage.io: api/thorimage-io.md
       - process_thorsync (legacy): api/process-thorsync.md
       - fix_frame_times: api/fix-frame-times.md
+      - pipeline.preprocess: api/pipeline-preprocess.md
       - pipeline.raw: api/pipeline-raw.md
       - movie: api/movie.md
       - olf_configs: api/olf-configs.md

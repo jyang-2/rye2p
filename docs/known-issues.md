@@ -149,3 +149,15 @@ its saved outputs; the legacy extraction was reproduced **bit-exactly** from
     92,125×1), and `timestamps0.npy` still holds the #1-bug garbage
     `stack_times` (4,606 = frames/20). *Fix: re-extract after the #22 fix,
     roadmap step 2; the `__main__` scratchpad retires into `thorsync/repair.py`.*
+
+## Found during the step-1 promotion (2026-11-19)
+
+25. **Notebook `preprocess_thorimage` traps (mostly resolved at promotion)** —
+    the `pipeline_demo.ipynb` original (a) validated both raw filenames but
+    hard-coded `Image_001_001.raw` in the loader, crashing on
+    `Image_0001_0001.raw` folders; (b) re-read the *copied* `Experiment.xml`,
+    crashing when `copy_xml=False` + `save_settings=True`; (c) still wrote the
+    full tiff with `save_single_tiff=False` (the splitter reads it back from
+    disk). The promoted `rye2p/pipeline/preprocess.py` fixes (a) and (b); (c)
+    is kept but documented in the docstring. Single-channel-only remains an
+    open limitation (`stack, = load_raw(...)`).

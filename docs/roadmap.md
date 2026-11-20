@@ -104,6 +104,10 @@ deleted (it stays recoverable in git history).
   `convert_raw_to_tiff`, `split_tiff_files` + `overwrite` flag);
   `pipeline/raw.py` and `convert_raw_fn_thorimage.py` are now re-export shims
   (first part of known issue #21 closed).
+- ✅ Step 1 (partial): `preprocess_thorimage` + `validate_thorimage_folder`
+  promoted into `rye2p/pipeline/preprocess.py` (fixes the raw-filename and
+  `copy_xml=False` traps — known issue #25); `pipeline_demo.ipynb` is now a
+  thin driver importing from the library.
 - ✅ ThorSync ground-truth check against a real upstairs acquisition
   (`odor_space_collab` 2023-04-11 fly 2): line inventory added to
   [timestamps.md](timestamps.md) and both `thorsync_lines.yaml` files; legacy
