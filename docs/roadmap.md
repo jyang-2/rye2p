@@ -99,6 +99,11 @@ deleted (it stays recoverable in git history).
   `plane_times_from_settings` + 7 passing tests (`tests/test_plane_times.py`).
 - ✅ This documentation site (mkdocs-material + mkdocstrings), README landing
   page, and a local (untracked) AI-assistant orientation file.
+- ✅ Step 1 (partial): raw→tiff functions consolidated into
+  `rye2p/thorimage/io.py` (`load_raw`, `copy_raw_dir_2_proc_dir`,
+  `convert_raw_to_tiff`, `split_tiff_files` + `overwrite` flag);
+  `pipeline/raw.py` and `convert_raw_fn_thorimage.py` are now re-export shims
+  (first part of known issue #21 closed).
 - ✅ ThorSync ground-truth check against a real upstairs acquisition
   (`odor_space_collab` 2023-04-11 fly 2): line inventory added to
   [timestamps.md](timestamps.md) and both `thorsync_lines.yaml` files; legacy

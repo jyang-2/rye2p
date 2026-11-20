@@ -99,8 +99,10 @@ checkpoint commit (`67ee170`). Roadmap steps that fix each are noted.
 
 ## Duplication (drift risk)
 
-21. `pipeline/raw.py` is a verbatim copy of two functions from
-    `convert_raw_fn_thorimage.py`; `get_thorsync_line_names`, `snake_case`,
+21. ~~`pipeline/raw.py` is a verbatim copy of two functions from
+    `convert_raw_fn_thorimage.py`~~ **fixed (step 1)**: the implementations now
+    live in `rye2p/thorimage/io.py`; both old modules re-export from it.
+    Still open: `get_thorsync_line_names`, `snake_case`,
     `clean_line_name`, `frames_by_scope_pulse`, `np_in_range` each exist in two
     modules; `match_pulse_times`/`match_scope_times` are byte-identical twins;
     `steps_per_frame` logic is re-derived inline in ≥4 places instead of reading

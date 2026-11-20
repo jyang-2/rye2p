@@ -1,5 +1,6 @@
 # pipeline.raw
 
-Raw→tiff conversion steps (currently duplicates `convert_raw_fn_thorimage`; see roadmap step 1).
+Re-exports from [`thorimage.io`](thorimage-io.md), where the raw→tiff
+implementations now live (roadmap step 1).
 
 ::: rye2p.pipeline.raw

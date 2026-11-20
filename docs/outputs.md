@@ -50,12 +50,13 @@ The full movie as one ImageJ hyperstack, `uint16`.
   (`utils2p.load_raw` trims them; `utils2p.save_img` writes ImageJ axis order).
 - single-plane: `(T, Y, X)`.
 
-Written by `convert_raw_fn_thorimage.convert_raw_to_tiff` (= `pipeline.raw`).
+Written by `rye2p.thorimage.io.convert_raw_to_tiff` (re-exported by
+`convert_raw_fn_thorimage` and `pipeline.raw`).
 
 ### `stk/stk_000.tif`, `stk_001.tif`, …
 The same movie re-split into 500-timepoint chunks (`frames_per_batch=500`) for
 suite2p/caiman ingestion. ⚠️ `split_tiff_files` silently writes **nothing** if
-`stk/` already exists.
+`stk/` already exists (pass `overwrite=True` to rewrite in place).
 
 ### `timestamps0.npy` (legacy path only)
 Raw extraction result, **before** repairs. A pickled dict saved with `np.save` —
