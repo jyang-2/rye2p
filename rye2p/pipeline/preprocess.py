@@ -11,6 +11,21 @@ it by file path, see ``tests/``.
 import shutil
 from pathlib import Path
 
+try:
+    from rye2p.pathguard import guard_write_dir, RawDataWriteError
+except ImportError:
+    # Loaded by file path outside the package (the numpy-only test env,
+    # where rye2p/__init__'s utils2p import fails): load the stdlib-only
+    # guard directly from its file instead.
+    import importlib.util as _importlib_util
+
+    _pathguard_file = Path(__file__).resolve().parent.parent / "pathguard.py"
+    _spec = _importlib_util.spec_from_file_location("rye2p_pathguard", _pathguard_file)
+    _pathguard = _importlib_util.module_from_spec(_spec)
+    _spec.loader.exec_module(_pathguard)
+    guard_write_dir = _pathguard.guard_write_dir
+    RawDataWriteError = _pathguard.RawDataWriteError
+
 #: Raw movie filenames ThorImage has used, in lookup order (newer first).
 RAW_MOVIE_NAMES = ("Image_001_001.raw", "Image_0001_0001.raw")
 
@@ -88,11 +103,16 @@ def preprocess_thorimage(raw_mov_dir, proc_mov_dir, thorsync_name=None,
 
     Returns:
         Path: ``proc_mov_dir``.
+
+    Raises:
+        RawDataWriteError: if ``proc_mov_dir`` is a raw-data location
+            (see :mod:`rye2p.pathguard`) — e.g. swapped raw/proc arguments.
     """
     raw_mov_dir = Path(raw_mov_dir)
     proc_mov_dir = Path(proc_mov_dir)
 
     raw_file = validate_thorimage_folder(raw_mov_dir)
+    guard_write_dir(proc_mov_dir, what="preprocessed ThorImage outputs")
     proc_mov_dir.mkdir(parents=True, exist_ok=True)
 
     save_tiffs = save_single_tiff or save_tiff_sequence

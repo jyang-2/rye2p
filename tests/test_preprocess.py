@@ -77,6 +77,29 @@ def test_preprocess_copies_xml_only(tmp_path):
     assert sorted(p.name for p in proc_dir.iterdir()) == ["Experiment.xml"]
 
 
+def test_preprocess_refuses_proc_dest_in_raw_data_tree(tmp_path):
+    """A proc destination under a raw_data tree (e.g. mis-set NAS_PROC_DIR)
+    is refused before anything is written."""
+    raw_dir = _make_acquisition(tmp_path / "raw" / "acq")
+    proc_dir = tmp_path / "raw_data" / "acq"
+
+    with pytest.raises(preprocess_module.RawDataWriteError, match="raw_data"):
+        preprocess_thorimage(raw_dir, proc_dir)
+    assert not proc_dir.exists()
+
+
+def test_preprocess_refuses_writing_into_acquisition_folder(tmp_path):
+    """proc == raw (swapped/duplicated argument) is refused by the
+    acquisition-fingerprint check, regardless of flags."""
+    raw_dir = _make_acquisition(tmp_path / "raw" / "acq")
+
+    with pytest.raises(preprocess_module.RawDataWriteError,
+                       match="raw acquisition file"):
+        preprocess_thorimage(raw_dir, raw_dir, copy_xml=False,
+                             save_settings=False, save_single_tiff=False,
+                             save_tiff_sequence=False)
+
+
 def test_preprocess_no_copy_xml(tmp_path):
     raw_dir = _make_acquisition(tmp_path / "raw" / "acq")
     proc_dir = tmp_path / "proc" / "acq"

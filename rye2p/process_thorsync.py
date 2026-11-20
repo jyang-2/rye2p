@@ -22,6 +22,7 @@ import pprint as pp
 import h5py
 from fuzzywuzzy import fuzz
 from rye2p import fix_frame_times
+from rye2p.pathguard import guard_write_dir
 
 
 def get_thorsync_line_names(h5_file):
@@ -267,6 +268,7 @@ def convert_thorsync_to_timestamps_npy(flacq, raw_dir, proc_dir, match_stack_tim
     # make initial timestamps0.npy
     h5_file, sync_meta_file, meta_file = flacq2rawfiles(flacq, raw_dir)
     SAVE_DIR = flacq2dir(flacq, proc_dir)
+    guard_write_dir(SAVE_DIR, what="timestamps npy files")
 
     print(f'\nConverting ThorSync to timestamps:')
     print(f"\t- SAVE_DIR: {SAVE_DIR}")
@@ -321,6 +323,7 @@ def create_proc_dir(flacq, proc_dir):
     """Creates movie folder in processed data directory `PROC_DATA_DIR` for FlatFlyAcquisitions."""
 
     mov_dir = flacq2dir(flacq, proc_dir)
+    guard_write_dir(mov_dir, what="processed movie folder")
     print(f"\n{mov_dir}")
     print(f"\tmovie folder exists: {mov_dir.is_dir()}")
 
@@ -348,6 +351,7 @@ def copy_experiment_xml(flacq, raw_dir, proc_dir):
     dest_file = flacq2dir(flacq, proc_dir).joinpath('Experiment.xml')
 
     if not dest_file.exists():
+        guard_write_dir(dest_file.parent, what="Experiment.xml copy")
         shutil.copy(meta_file, dest_file)
 
         print(f"\nCopied meta_file:"

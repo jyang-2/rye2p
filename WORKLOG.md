@@ -72,6 +72,16 @@ Fresh sessions are cheap — this file is the handoff.
 - Tests 7 → 29 (preprocess, linenames, frame counts; CI gains pyyaml only);
   mkdocs clean; smoke test in `twoppp311` confirms shim identity + package
   data + fuzzy fallback.
+- **Raw-data write guard** (follow-up audit, same session): checked every
+  filesystem write in the package — none targets tensor-archive when used as
+  documented, but tensor-archive is mounted **rw, 777** (verified), so added
+  `rye2p/pathguard.py`: all output-root writers (`preprocess_thorimage`,
+  `thorimage.io.*`, legacy `process_thorsync`) raise `RawDataWriteError` on
+  destinations under `tensor-archive`/`raw_data` or inside a folder holding a
+  raw acquisition file (catches swapped raw/proc args).
+  `RYE2P_ALLOW_RAW_WRITES=1` downgrades to a warning. Tests 29 → 39; guard
+  verified in `twoppp311` against a fake tensor-archive path (refused, nothing
+  created).
 
 **Why**
 - Roadmap order: step 1 unblocks step 2 (the timing fixes land in library

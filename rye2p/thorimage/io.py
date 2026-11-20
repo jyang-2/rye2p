@@ -10,6 +10,8 @@ from pathlib import Path
 
 import utils2p
 
+from rye2p.pathguard import guard_write_dir
+
 
 def load_raw(raw_file):
     """Load a ThorImage .raw movie using the sibling Experiment.xml.
@@ -39,6 +41,7 @@ def copy_raw_dir_2_proc_dir(src_file, raw_dir, proc_dir):
         src_file = Path(src_file)
 
     dest_file = proc_dir.joinpath(*src_file.relative_to(raw_dir).parts)
+    guard_write_dir(dest_file.parent, what=f"copy of {src_file.name}")
     shutil.copy(src_file, dest_file)
     return dest_file
 
@@ -58,15 +61,18 @@ def convert_raw_to_tiff(raw_file, raw_dir, proc_dir):
     meta_file = raw_file.with_name('Experiment.xml')
     meta = utils2p.Metadata(meta_file)
 
-    # .raw --> .tif
-    stack1, = utils2p.load_raw(raw_file, meta)
-
     # convert to relative path
     rel_path = raw_file.relative_to(raw_dir)
     print(f"\nRaw image file: {rel_path}")
 
     # build tiff file name - save full movie as Image_001_001.tif
+    # (destination checked before the movie is loaded, so a refused
+    # destination fails fast)
     save_name = proc_dir.joinpath(rel_path.with_suffix(".tif"))
+    guard_write_dir(save_name.parent, what="converted tiff")
+
+    # .raw --> .tif
+    stack1, = utils2p.load_raw(raw_file, meta)
 
     save_name.parent.mkdir(parents=True, exist_ok=True)
     print(f"Saving to: {save_name}")
@@ -103,6 +109,7 @@ def split_tiff_files(tiff_file, frames_per_batch, save_dir=Path('stk'), overwrit
     STK_DIR = tiff_file.parent.joinpath(save_dir)
 
     if overwrite or not STK_DIR.is_dir():
+        guard_write_dir(STK_DIR, what="split tiff chunks")
         saved_files = []
         STK_DIR.mkdir(parents=True, exist_ok=True)
 

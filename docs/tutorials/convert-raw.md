@@ -77,3 +77,8 @@ validates it, and runs the steps above.
   under the raw root, so pass the roots (not the movie dirs) as `raw_dir` /
   `proc_dir`.
 - Memory: the whole movie is loaded into RAM as uint16.
+- All of these functions **refuse to write into raw-data locations**
+  (tensor-archive, `raw_data` trees, or a folder containing the .raw/.h5
+  itself) and raise `RawDataWriteError` — see
+  [`pathguard`](../api/pathguard.md). Swapping `raw_dir`/`proc_dir` fails
+  fast instead of polluting the archive.

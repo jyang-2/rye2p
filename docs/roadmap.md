@@ -112,6 +112,12 @@ deleted (it stays recoverable in git history).
   `rye2p/data/microscopes/*/thorsync_lines.yaml` (package data);
   `thorsync/linenames.py` gains `load_line_map` + `match_lines` (YAML primary,
   Hungarian fuzzy matching fallback-only, heavy imports now lazy) + tests.
+- ✅ Raw-data write guard (`rye2p/pathguard.py`): every output-root write
+  path (`preprocess_thorimage`, `thorimage.io.*`, legacy `process_thorsync`
+  writers) refuses destinations under `tensor-archive`/`raw_data` or inside
+  a folder holding a raw acquisition file; `RYE2P_ALLOW_RAW_WRITES=1`
+  downgrades to a warning. Prompted by the 2026-11-19 write-path audit
+  (tensor-archive is mounted rw with open permissions — no OS backstop).
 - ✅ **Step 1 complete**: frame-count validator promoted into
   `thorsync/timestamps.py` (`frames_by_scope_pulse`, `expected_frame_counts`,
   `validate_frame_counts(..., strict=False)` — warns now, step 2 flips the

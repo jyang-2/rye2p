@@ -65,6 +65,19 @@ Fuzzy line-name matching, a 2.5 V analog threshold assumption, and a
 single-plane `steps_per_frame` bug make this path unreliable on the downstairs
 rig and on single-plane recordings — details in [known issues](known-issues.md).
 
+## Raw-data write guard
+
+Every library function that chooses an output root
+(`preprocess_thorimage`, `convert_raw_to_tiff`, `split_tiff_files`,
+`copy_raw_dir_2_proc_dir`, and the legacy `process_thorsync` writers) calls
+[`pathguard.guard_write_dir`](api/pathguard.md) first and **raises
+`RawDataWriteError`** instead of writing when the destination is a raw-data
+location: any path containing a `tensor-archive` or `raw_data` component, or
+a directory that (itself or its parent) holds a raw acquisition file
+(`Image_001_001.raw` / `Image_0001_0001.raw` / `Episode001.h5`). This catches
+swapped `raw_dir`/`proc_dir` arguments and mis-set path literals. Deliberate
+exceptions: set `RYE2P_ALLOW_RAW_WRITES=1` (downgrades to a warning).
+
 ## Downstream contract
 
 What analysis code consumes (see `data/haoru/example_trial_extraction.py` for a
