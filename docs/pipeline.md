@@ -31,7 +31,8 @@ per ThorImage folder: validate folder → copy `Experiment.xml` → write
 (use `scripts/for_ruoyi/thorsync_lines_demo.ipynb` for single-plane recordings):
 
 1. parse olf config → stimulus CSVs
-2. load the per-rig line map from `data/microscopes/<scope>/thorsync_lines.yaml`
+2. load the per-rig line map (`rye2p.thorsync.linenames.load_line_map`, reading
+   the package data in `rye2p/data/microscopes/<scope>/thorsync_lines.yaml`)
 3. `utils2p.synchronization.get_lines_from_sync_file` → raw lines;
    `SyncMetadata.get_freq()` → sample rate
 4. decimate to 1 kHz, save `sync_lines.npz` (QC)

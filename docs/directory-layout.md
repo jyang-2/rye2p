@@ -62,11 +62,13 @@ the module globals `RAW_DATA_DIR`, `NAS_PROC_DIR`, `NAS_PRJ_DIR`,
 ## Per-microscope line maps
 
 ```
-data/microscopes/
+rye2p/data/microscopes/
 ├── downstairs-2p/thorsync_lines.yaml
 └── upstairs-2p/thorsync_lines.yaml
 ```
 
+Shipped as package data — load with
+`rye2p.thorsync.linenames.load_line_map("<scope>")`.
 Each YAML maps canonical line names → that rig's actual h5 dataset names, e.g.
 downstairs `scope_pin: scopePin` (a digital `DI` line) vs. upstairs analog
 lines. These supersede fuzzy name matching. Note the rigs differ electrically:
@@ -78,20 +80,20 @@ thresholds must be chosen accordingly (normalize first; see
 
 ```
 rye2p/                   # the package
-├── thorimage/           #   Experiment.xml parsing (settings.py), raw loading (io.py)
+├── thorimage/           #   Experiment.xml parsing (settings.py), raw→tiff (io.py)
 ├── thorsync/            #   line names, per-plane timestamps, h5 helpers
-├── pipeline/            #   raw→tiff conversion steps
+├── pipeline/            #   preprocess_thorimage orchestration (preprocess.py)
+├── data/microscopes/    #   per-rig thorsync_lines.yaml (package data)
 ├── olfactometer/        #   stimulus config generation (person-specific)
 ├── process_thorsync.py  #   LEGACY end-to-end ThorSync → timestamps.npy
 ├── fix_frame_times.py   #   timestamp repairs
-├── convert_raw_fn_thorimage.py  # LEGACY raw→tiff (duplicated by pipeline/raw.py)
+├── convert_raw_fn_thorimage.py  # LEGACY raw→tiff (re-exports thorimage/io.py)
 ├── thormatch.py         #   pair ThorImage ↔ ThorSync folders by mtime
 ├── olf_configs.py       #   olfactometer YAML → stimulus tables
 ├── datadirs.py          #   LEGACY hard-coded project paths
 └── ...                  #   one-off analysis/figure scripts (see roadmap)
 notebooks/               # the de-facto current pipeline (see pipeline.md)
 scripts/for_*/           # per-person demo/rescue scripts
-data/microscopes/        # per-rig thorsync_lines.yaml
 data/haoru/              # small committed worked example (timestamps.npy, df_stim.csv, F.tsv)
 tests/                   # pytest suite
 docs/ + mkdocs.yml       # this documentation site

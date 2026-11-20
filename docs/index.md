@@ -40,7 +40,7 @@ ThorImage folder                    ThorSync folder
     The repo currently contains a **legacy path** (`rye2p/process_thorsync.py` +
     `rye2p/master.py`, fuzzy line-name matching) and a **current path**
     (`notebooks/pipeline_demo.ipynb` + `notebooks/thorsync_lines_demo.ipynb`,
-    explicit per-microscope line maps in `data/microscopes/*/thorsync_lines.yaml`).
+    explicit per-microscope line maps in `rye2p/data/microscopes/*/thorsync_lines.yaml`).
     Both write the same `timestamps.npy`; the notebook path is what's actively
     used. The [roadmap](roadmap.md) describes how they get unified. Until then,
     prefer the notebook path for new data.

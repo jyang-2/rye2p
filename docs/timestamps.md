@@ -25,7 +25,7 @@ also unused for timing; `piezo_monitor`, `pockels_monitor`, and `pid` are
 QC/plotting only.
 
 The mapping from canonical names to each rig's actual h5 dataset names lives in
-[`data/microscopes/<scope>/thorsync_lines.yaml`](directory-layout.md#per-microscope-line-maps)
+[`rye2p/data/microscopes/<scope>/thorsync_lines.yaml`](directory-layout.md#per-microscope-line-maps)
 (current approach). The legacy path fuzzy-matches names instead
 (`process_thorsync.get_matched_thorsync_lines`).
 
@@ -37,7 +37,7 @@ Everything actually inside a ThorSync `.h5`, per rig. Upstairs was verified
 51,519,000 samples @ 30 kHz — a single-plane recording; fast-z–specific
 behaviors were verified on `SyncData001` of the same fly). The downstairs
 listing is the dump recorded in
-`data/microscopes/downstairs-2p/thorsync_lines.yaml`.
+`rye2p/data/microscopes/downstairs-2p/thorsync_lines.yaml`.
 
 **Upstairs** (11 datasets — exactly the 9 canonical lines plus `Freq/` and `Global/`):
 
@@ -69,7 +69,7 @@ rewire) in `AI`; `Bleach Complete`, `Bleach Out`, `Digital 01`, `Line 4`,
 `Line 7` in `DI`. There `scopePin` is **digital u4** (hence the normalized
 thresholds in the notebooks), `lightpath_shutter` maps to `flipperMirror`, and
 there is no `Freq/` group. Full dump in
-`data/microscopes/downstairs-2p/thorsync_lines.yaml`.
+`rye2p/data/microscopes/downstairs-2p/thorsync_lines.yaml`.
 
 ## How frame times are computed
 

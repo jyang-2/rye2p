@@ -19,17 +19,18 @@ times — from a ThorSync `.h5`. Concepts behind every step:
 ├── Episode001.h5                  # (or Episode_0000.h5)
 └── ThorRealTimeDataSettings.xml   # sample rate lives here
 <PROC_ROOT>/<date>/<fly>/<thorimage_name>/thorimage_settings.yaml   # from the convert step
-data/microscopes/<scope>/thorsync_lines.yaml                        # per-rig line names
+rye2p/data/microscopes/<scope>/thorsync_lines.yaml                  # per-rig line names (package data)
 ```
 
 ## The notebook path, step by step
 
 ```python
-import numpy as np, yaml
+import numpy as np
 import utils2p.synchronization as sync
 
-# 1. per-rig line map (canonical name -> h5 dataset name)
-line_map = yaml.safe_load(open("data/microscopes/upstairs-2p/thorsync_lines.yaml"))
+# 1. per-rig line map (canonical name -> h5 dataset name), shipped with the package
+from rye2p.thorsync.linenames import load_line_map
+line_map = load_line_map("upstairs-2p")
 
 # 2. load lines + sample rate
 lines = sync.get_lines_from_sync_file(h5_file, list(line_map.values()))

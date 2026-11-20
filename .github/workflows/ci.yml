@@ -13,8 +13,9 @@ jobs:
         with:
           python-version: "3.11"
       # Tests import modules directly by file path, so the full scientific
-      # stack (utils2p, h5py, ...) is not needed here.
-      - run: pip install numpy pytest
+      # stack (utils2p, h5py, ...) is not needed here. pyyaml is for the
+      # per-rig line-map tests (thorsync/linenames.py).
+      - run: pip install numpy pyyaml pytest
       - run: python -m pytest
 
   docs:

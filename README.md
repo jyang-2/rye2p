@@ -69,7 +69,7 @@ Browse the documentation site (with live reload):
 rye2p/               the package — see docs/directory-layout.md for the per-module map
 notebooks/           the de-facto current pipeline (pipeline_demo, thorsync_lines_demo)
 scripts/for_*/       per-person demos & rescue scripts
-data/microscopes/    per-rig ThorSync line-name maps (thorsync_lines.yaml)
+rye2p/data/microscopes/  per-rig ThorSync line-name maps (package data)
 data/haoru/          small committed worked example (timestamps.npy, df_stim.csv, F.tsv)
 tests/               pytest suite
 docs/ + mkdocs.yml   documentation site sources

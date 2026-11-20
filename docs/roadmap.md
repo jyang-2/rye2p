@@ -108,6 +108,10 @@ deleted (it stays recoverable in git history).
   promoted into `rye2p/pipeline/preprocess.py` (fixes the raw-filename and
   `copy_xml=False` traps — known issue #25); `pipeline_demo.ipynb` is now a
   thin driver importing from the library.
+- ✅ Step 1 (partial): per-rig line maps moved to
+  `rye2p/data/microscopes/*/thorsync_lines.yaml` (package data);
+  `thorsync/linenames.py` gains `load_line_map` + `match_lines` (YAML primary,
+  Hungarian fuzzy matching fallback-only, heavy imports now lazy) + tests.
 - ✅ ThorSync ground-truth check against a real upstairs acquisition
   (`odor_space_collab` 2023-04-11 fly 2): line inventory added to
   [timestamps.md](timestamps.md) and both `thorsync_lines.yaml` files; legacy

@@ -37,5 +37,9 @@ docs = ["mkdocs-material", "mkdocstrings[python]", "pymdown-extensions<12"]
 [tool.setuptools.packages.find]
 include = ["rye2p*"]
 
+[tool.setuptools.package-data]
+# package-data globs don't recurse: spell out the subdirectory level
+"rye2p.data" = ["microscopes/*/*.yaml"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

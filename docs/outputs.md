@@ -15,7 +15,7 @@ See [Directory layout](directory-layout.md) for how the roots are chosen.
 ### `Experiment.xml`
 Verbatim copy of the ThorImage metadata XML (`shutil.copy`; skipped if already
 present). Written by `process_thorsync.copy_experiment_xml` or
-`preprocess_thorimage` (notebook).
+`pipeline.preprocess.preprocess_thorimage` (which overwrites rather than skips).
 
 ### `thorimage_settings.yaml`
 Parsed, human-readable acquisition settings — the yaml round-trip of
@@ -138,4 +138,4 @@ modification times):
 |---|---|
 | `<PRJ_DIR>/manifestos/flat_linked_thor_acquisitions.json` | manifest of linked (ThorImage, ThorSync, olf config) triples the legacy driver iterates over |
 | `<OLF_CONFIG_DIR>/*.yaml` | olfactometer configs → stimulus tables |
-| `data/microscopes/<scope>/thorsync_lines.yaml` | per-rig line-name maps (in this repo) |
+| `rye2p/data/microscopes/<scope>/thorsync_lines.yaml` | per-rig line-name maps (in this repo) |
