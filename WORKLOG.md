@@ -23,14 +23,16 @@ Fresh sessions are cheap — this file is the handoff.
 
 ## NOW
 
-- **Active work:** `cleanup` branch — ground-truth check done; ready for
-  roadmap step 1.
-- **Next action:** roadmap step 1 — promote `preprocess_thorimage()` from
-  `notebooks/pipeline_demo.ipynb` into `rye2p/pipeline/preprocess.py`
-  (see [docs/roadmap.md](docs/roadmap.md)). Architecture changes and bug fixes
-  proceed together in roadmap order (steps 1–3), not fixes-first. Step 2 now
-  includes the newly found issue #22 (legacy drops first frame/volume —
-  stack_times one volume late in all legacy-produced files).
+- **Active work:** `cleanup` branch — **roadmap step 1 complete** (notebook
+  pipeline promoted into the library; 4 commits, all tests green).
+- **Next action:** roadmap step 2 — fix timing correctness (see
+  [docs/roadmap.md](docs/roadmap.md)): `steps_per_frame` from
+  `FunctionalImagingSettings` everywhere (#1 incl. the averageMode facet),
+  legacy dropped-first-frame/volume (#22), first-plane stack-time convention
+  (#2), normalize-first edge detection at full rate (#3/#23), validation
+  raises by default (`validate_frame_counts` exists — flip `strict=True` and
+  call it from extraction), pairing-fingerprint check. Regression tests on
+  synthetic traces + `data/haoru`.
 - **Heads-up for downstream work:** legacy `timestamps.npy` files (e.g. all
   odor_space_collab-era) have `stack_times[i]` = first plane of volume i+1
   (~337 ms late) and `frame_times` one frame late — see known issues #22 and
@@ -48,6 +50,42 @@ Fresh sessions are cheap — this file is the handoff.
 - **Parallel sessions:** before starting a second simultaneous session, claim a
   line here (branch + worktree path), e.g.
   `- session B: branch fix-timing, worktree ../rye2p-timing`.
+
+## 2026-11-19 (later) — Roadmap step 1 done: notebook pipeline → library
+
+**Done** (4 commits on `cleanup`)
+- `rye2p/thorimage/io.py` is now the single home of raw→tiff
+  (`load_raw` str-arg bug fixed, `split_tiff_files` gains `overwrite=`);
+  `pipeline/raw.py` + `convert_raw_fn_thorimage.py` are re-export shims
+  (first part of known issue #21 closed; existing importers unaffected).
+- `rye2p/pipeline/preprocess.py`: `preprocess_thorimage` +
+  `validate_thorimage_folder` promoted from `pipeline_demo.ipynb` (now a thin
+  driver). Fixed en route: Image_0001_0001.raw crash, `copy_xml=False` crash
+  (new known issue #25 catalogues the notebook traps).
+- Per-rig line maps → `rye2p/data/microscopes/` (package data + pyproject
+  rule); `linenames.load_line_map` / `match_lines` — YAML primary, Hungarian
+  fuzzy fallback-only (warns), heavy imports lazy.
+- Frame-count validator → `thorsync/timestamps.py`
+  (`frames_by_scope_pulse`, `expected_frame_counts`,
+  `validate_frame_counts(strict=False)`; covers single-plane/averaging, not
+  just fast-z); both notebook validator cells now call the library.
+- Tests 7 → 29 (preprocess, linenames, frame counts; CI gains pyyaml only);
+  mkdocs clean; smoke test in `twoppp311` confirms shim identity + package
+  data + fuzzy fallback.
+
+**Why**
+- Roadmap order: step 1 unblocks step 2 (the timing fixes land in library
+  code instead of notebooks).
+
+**Decisions**
+- Legacy `convert_raw_fn_thorimage` shimmed now (byte-identical bodies, zero
+  risk) rather than waiting for step 5; formal `DeprecationWarning`s still
+  step 5.
+- `validate_frame_counts` warns by default for now — flipping to
+  `strict=True` is step 2, alongside making extraction call it.
+
+**Open questions**
+- None new; step-2 scope as listed in NOW.
 
 ## 2026-11-19 — Single-plane re-derivation; ThorSync GUI built + verified
 
