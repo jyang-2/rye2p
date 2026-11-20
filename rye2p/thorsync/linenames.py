@@ -61,7 +61,8 @@ def load_line_map(microscope):
         return yaml.safe_load(f)
 
 
-def match_lines(observed_line_names, microscope=None, ratio_type='simple'):
+def match_lines(observed_line_names, microscope=None, ratio_type='simple',
+                line_names=None):
     """Map canonical line names to observed ThorSync dataset names.
 
     The per-rig YAML map is primary: every map entry whose observed name is
@@ -77,21 +78,24 @@ def match_lines(observed_line_names, microscope=None, ratio_type='simple'):
             YAML map entirely (pure fuzzy matching).
         ratio_type (str): fuzzy ratio passed to
             :func:`get_matched_thorsync_lines`.
+        line_names (List[str]): canonical names to resolve (default:
+            ``default_line_names``). Pass the subset you actually need so
+            absent lines don't trigger the fuzzy fallback warning.
 
     Returns:
-        dict: ``{canonical_name: observed_name}`` for all of
-        ``default_line_names``.
+        dict: ``{canonical_name: observed_name}`` for all of ``line_names``.
     """
     observed_line_names = list(observed_line_names)
+    targets = list(line_names) if line_names is not None else list(default_line_names)
 
     matched = {}
     if microscope is not None:
         line_map = load_line_map(microscope)
         matched = {canonical: observed
                    for canonical, observed in line_map.items()
-                   if observed in observed_line_names}
+                   if canonical in targets and observed in observed_line_names}
 
-    missing = [name for name in default_line_names if name not in matched]
+    missing = [name for name in targets if name not in matched]
     if missing:
         warnings.warn(
                 f"line map {'(none given)' if microscope is None else repr(microscope)} "
